@@ -33,8 +33,8 @@ enum Updater {
     /// 下载一段文本（m3u 列表），上限 4 MB
     static func download(_ raw: String, limit: Int = 4 * 1024 * 1024,
                          timeout: TimeInterval = 30) async throws -> String {
-        guard let url = URL(string: raw) else { throw UpdateError.notHTTPS }
-        guard url.scheme?.lowercased() == "https" else { throw UpdateError.notHTTPS }
+        guard let url = URL(string: raw) else { throw Updater.UpdateError.notHTTPS }
+        guard url.scheme?.lowercased() == "https" else { throw Updater.UpdateError.notHTTPS }
 
         var req = URLRequest(url: url, timeoutInterval: timeout)
         req.setValue(userAgent, forHTTPHeaderField: "User-Agent")
@@ -42,9 +42,9 @@ enum Updater {
 
         let (data, resp) = try await URLSession.shared.data(for: req)
         if let http = resp as? HTTPURLResponse, http.statusCode >= 400 {
-            throw UpdateError.badStatus(http.statusCode)
+            throw Updater.UpdateError.badStatus(http.statusCode)
         }
-        guard !data.isEmpty else { throw UpdateError.empty }
+        guard !data.isEmpty else { throw Updater.UpdateError.empty }
         let body = data.count > limit ? data.prefix(limit) : data
         return String(decoding: body, as: UTF8.self)
     }
@@ -142,7 +142,7 @@ enum AppUpdate {
         let (data, resp) = try await URLSession.shared.data(for: req)
         guard let http = resp as? HTTPURLResponse, http.statusCode == 200,
               data.count > 1024 else {
-            throw UpdateError.badStatus((resp as? HTTPURLResponse)?.statusCode ?? -1)
+            throw Updater.UpdateError.badStatus((resp as? HTTPURLResponse)?.statusCode ?? -1)
         }
         let zip = tmp.appendingPathComponent("app.zip")
         try data.write(to: zip)
@@ -151,7 +151,7 @@ enum AppUpdate {
         p.executableURL = URL(fileURLWithPath: "/usr/bin/unzip")
         p.arguments = ["-q", "-o", zip.path, "-d", tmp.path]
         try p.run(); p.waitUntilExit()
-        guard p.terminationStatus == 0 else { throw UpdateError.badStatus(-2) }
+        guard p.terminationStatus == 0 else { throw Updater.UpdateError.badStatus(-2) }
 
         let entries = try fm.contentsOfDirectory(atPath: tmp.path).filter { $0.hasSuffix(".app") }
         guard let appName = entries.first else { throw AppUpdateError.noMatchingAsset }

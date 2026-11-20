@@ -18,7 +18,7 @@ CHECK_ONLY=0
 UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 
 declare -a SOURCES=(
-  "public-zbds|https://live.zbds.top/tv/iptv4.m3u|vbskycn/iptv"
+  "public-zbds-ipv4|https://live.zbds.top/tv/iptv4.m3u|vbskycn/iptv"
   "public-suxuang|https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u|suxuang/myIPTV"
   "public-iptv-org-cn|https://iptv-org.github.io/iptv/countries/cn.m3u|iptv-org/cn"
 )
