@@ -25,10 +25,11 @@ jobs:
       - name: 构建内嵌版
         run: APP_VERSION="${GITHUB_REF_NAME#v}" ./mac-app/build.sh
 
+      # 资产名必须 ASCII：GitHub 上传中文资产名会丢失前缀（v1.0.2 实测踩坑）
       - name: 打包 zip
         run: |
           mkdir -p dist
-          ditto -c -k --keepParent "mac-app/build/开台 Full.app" "dist/开台-full-arm64.zip"
+          ditto -c -k --keepParent "mac-app/build/开台 Full.app" "dist/kaitai-full-arm64.zip"
 
       - name: 发布 Release
         uses: softprops/action-gh-release@v2
