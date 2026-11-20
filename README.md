@@ -1,27 +1,22 @@
 # 开台 · KaiTai
 
-一个 1.7 MB 的 Mac 直播 App（也是能部署到 ECS 的网页版）。**服务器只存文本播放列表（每次几 KB），视频流由播放器直连源站**，不消耗服务器带宽。
+一个内置播放内核的 Mac 直播 App（也是能部署到 ECS 的网页版）。**服务器只存文本播放列表（每次几 KB），视频流由播放器直连源站**，不消耗服务器带宽。
 
 - 列表里**只留实测能播的频道**，点开就出画面（当前 227 条，二次复测 207/207）
 - 无广告、无插播、关窗即释放资源（无常驻进程、无后台服务）
 - 一键更新源，更新时逐条在真实播放器里试播
 - 播不了的源（FLV/组播）一键交给 IINA / VLC / mpv
 
-## 两个分发包
+## 分发包
 
-| 版本 | 体积 | 依赖 | 能播 |
-|---|---|---|---|
-| **精简版**（默认，已验证） | 1.7 MB | 建议装 IINA 或 VLC | HLS / MP4；FLV 等一键交给外部播放器 |
-| **内嵌版**（代码就绪，待接内核） | 60~120 MB | 无 | 全格式，含 FLV / RTMP / 组播 |
+只分发**内嵌版**（内置 libmpv 播放内核）：65 MB、无任何依赖、全格式直连播放（含 FLV / RTMP / 组播转单播）。下载见 [GitHub Releases](https://github.com/XiaoluD/kaitai/releases/latest)。
 
 ```bash
-./mac-app/build.sh                    # 精简版
-VARIANT=embedded ./mac-app/build.sh   # 内嵌版（需先 brew install mpv dylibbundler）
-./scripts/release.sh both             # 打包两个 zip 到 dist/
+./mac-app/build.sh   # 内嵌版（需先 brew install mpv dylibbundler）
 ```
 
 ⚠️ 未签名未公证。分发后首次打开要右键 →「打开」，或
-`xattr -dr com.apple.quarantine /Applications/开台.app`。
+`xattr -dr com.apple.quarantine "/Applications/开台 Full.app"`。
 想做到双击无提示，需要 Apple Developer Program（$99/年）做开发者 ID 签名 + 公证。
 
 ## 目录
@@ -41,14 +36,14 @@ iptv-web/
 │   ├── sync-self.sh        从你的 GitHub Pages 拉 result.m3u
 │   └── self.env.example    填 SELF_URL
 │
-├── mac-app/                ← Mac 原生 App（1.7 MB，关窗即释放）
+├── mac-app/                ← Mac 原生 App（65 MB，内嵌 libmpv，关窗即释放）
 │   ├── main.swift          AppKit + WKWebView + 内嵌 loopback 静态服务 + 外部播放器桥
 │   ├── probe.swift         自检工具：探测播放能力与可播率
 │   ├── probe-batch.swift   批量真实试播，产出「哪些能播」的地面真相
 │   ├── snapshot.swift      给 UI 拍快照，用于人工核对
 │   ├── Updater.swift       更新源的原生部分（下载 + 落盘）
 │   ├── icon/               矢量图源 + icon.icns（脚本生成）
-│   ├── build.sh            一键编译打包（VARIANT=lite|embedded）
+│   ├── build.sh            一键编译打包（默认内嵌版）
 │   └── README.md           实测数据与方案取舍
 │
 ├── web/                    ← 唯一需要部署到 ECS 的部分

@@ -2,17 +2,14 @@
 # 构建「开台」.app（原生，无 Electron）
 #
 # 用法:
-#   ./mac-app/build.sh                  # 精简版（默认）：不内嵌播放器内核，840 KB
-#   VARIANT=embedded ./mac-app/build.sh # 内嵌版：预留，需接入 libmpv 后生效
+#   ./mac-app/build.sh                  # 内嵌版（默认）：内置 libmpv 播放内核，全格式直播
 #
-# 两个版本共用同一套前端和启动逻辑，差别只在：
-#   - 是否内嵌播放器内核（决定能不能播 FLV / 组播）
-#   - 包体积与许可证（内嵌 libmpv 后整个包需按 GPLv2+ 分发）
+# 单一版本策略：内嵌 libmpv 的 Full 版是唯一分发版本（精简版已移除）。
 set -euo pipefail
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
-VARIANT="${VARIANT:-lite}"
+VARIANT="${VARIANT:-embedded}"
 ARCH="$(uname -m)"
 APP_VERSION="${APP_VERSION:-1.0.0}"
 

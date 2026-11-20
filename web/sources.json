@@ -4,7 +4,7 @@
   "sources": [
     {
       "id": "self-iptv-api",
-      "name": "我的 iptv-api",
+      "name": "默认",
       "type": "self",
       "file": "playlists/self-iptv-api.m3u",
       "local": true,

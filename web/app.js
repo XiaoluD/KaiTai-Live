@@ -7,10 +7,145 @@ const state = {
   activeSource: null,
   channels: [],
   groups: [],
+  activeGroup: '',
+  // 频道视图：跨源聚合 + 五大类
+  aggregated: [],
+  activeCat: '央视频道', // 进入程序默认打开央视频道
   current: null,
   hls: null,
   timer: null
 };
+
+let aggLoaded = false;
+
+const CATS = ['央视频道', '卫视频道', '港澳台', '其他'];
+
+/* 频道视图的分类规则（按频道名判断，与源自带的 group-title 无关）。
+ * 「电影频道」分类已按需求移除：CCTV-6 归入央视，电影/影院/CHC 等落入其他 */
+function classifyChannel(name) {
+  const n = String(name || '').toUpperCase();
+  if (/港澳|台湾|香港|澳门|凤凰|TVB|翡翠|明珠|本港|国际台|TVBS|三立|民视|中天|中视|华视|台视|东森|八大|RTHK|HOY|澳视|莲花|ASTRO|八大|纬来|龙华|靖天|龙祥|寰宇|AXN|HBO ASIA/.test(n)) return '港澳台';
+  if (/卫视/.test(n)) return '卫视频道';
+  if (/CCTV|CGTN|央视频道|央视|中央教育|CETV/.test(n)) return '央视频道';
+  return '其他';
+}
+
+/* 显示层剥离清晰度标注：CCTV-3（720p）→ CCTV-3；CCTV-17 HD (1080p) → CCTV-17 */
+function stripQual(name) {
+  let n = String(name || '');
+  // 括号内是清晰度标记的整段删除（其他括号内容保留）
+  n = n.replace(/[（(【\[][^）)】\]]*[）)】\]]/g, (m) =>
+    /(\d{3,4}p|4k|8k|fhd|uhd|hd|超清|高清|标清|蓝光)/i.test(m) ? '' : m);
+  // 裸尾缀只剥 HD/超清/高清/标清/蓝光/分辨率数字；4K/8K 是频道身份（CCTV-8K），不动
+  n = n.replace(/\s*(超清|高清|标清|蓝光|fhd|uhd|hd|\d{3,4}p)\s*$/i, '');
+  return n.replace(/\s{2,}/g, ' ').trim();
+}
+
+/* 从频道名里提取清晰度标记（720p / 4K / 高清…），用于源切换按钮和明细行的区分文案 */
+function qualTag(name) {
+  const m = /(\d{3,4}p|4k|8k|fhd|uhd|超清|高清|标清|蓝光)/i.exec(String(name || ''));
+  return m ? m[1].toLowerCase() : '';
+}
+
+/* 频道名归一化：同一台在不同源里写法略有差异（CCTV-1 / CCTV1(720p) / CCTV1高清） */
+function normName(name) {
+  return String(name || '')
+    .toLowerCase()
+    .replace(/[\s_]/g, '')
+    .replace(/[（(【\[][^）)】\]]*[）)】\]]/g, '') // 去括号内容（清晰度等），CCTV-1（720p）并进 CCTV-1
+    .replace(/[-_·]/g, '')
+    .replace(/(超清|高清|标清|蓝光|fhd|uhd|hd|4k|8k|50fps|60fps)$/i, '');
+}
+
+/* 把所有源的 m3u 一次性拉下来聚合成频道列表（频道视图数据底座） */
+async function loadAllSources() {
+  if (aggLoaded) return;
+  $('count').textContent = '聚合所有源…';
+  const results = await Promise.all(state.sources.map(async (s) => {
+    try {
+      const res = await fetch('./' + s.file, { cache: 'no-store' });
+      if (!res.ok) return { src: s, channels: [] };
+      return { src: s, channels: parseM3U(await res.text()) };
+    } catch (e) {
+      return { src: s, channels: [] };
+    }
+  }));
+
+  const map = new Map();
+  for (const { src, channels } of results) {
+    for (const ch of channels) {
+      const key = normName(ch.name);
+      if (!key) continue;
+      if (!map.has(key)) {
+        map.set(key, {
+          name: stripQual(ch.name), logo: '', fallbackLogo: '',
+          cat: classifyChannel(ch.name), items: []
+        });
+      }
+      const agg = map.get(key);
+      if (!agg.logo && ch.logo) agg.logo = ch.logo;
+      agg.items.push({ src, ch });
+    }
+  }
+  state.aggregated = [...map.values()];
+
+  // CCTV 系列统一换成高清台标（fanmingming/live 图床，640×360 透明底）；失败回退源 logo
+  for (const a of state.aggregated) {
+    const hi = premiumLogo(a.name);
+    if (hi) {
+      a.fallbackLogo = a.logo;
+      a.logo = hi;
+    }
+  }
+
+  // 排序：分类分块 → 央视里 CCTV 数字序在前 → 其余自然序（数字按数值比，CCTV-2 < CCTV-10）
+  state.aggregated.sort((a, b) => {
+    const ca = CATS.indexOf(a.cat), cb = CATS.indexOf(b.cat);
+    if (ca !== cb) return ca - cb;
+    const pa = /^CCTV/i.test(a.name) ? 0 : 1;
+    const pb = /^CCTV/i.test(b.name) ? 0 : 1;
+    if (pa !== pb) return pa - pb;
+    return naturalCmp(a.name, b.name);
+  });
+  aggLoaded = true;
+}
+
+/* 高清台标映射：CCTV-1..17 / CCTV5+ / CGTN 系列 */
+function premiumLogo(name) {
+  const n = String(name || '').toUpperCase().replace(/[\s-]/g, '');
+  const m = /^CCTV(\d{1,2})(\+?)($|[^0-9])/.exec(n);
+  if (m) return 'https://live.fanmingming.com/tv/CCTV' + m[1] + m[2] + '.png';
+  if (/^CGTN/.test(n)) {
+    if (/^CGTNDOC/.test(n)) return 'https://live.fanmingming.com/tv/CGTNDOC.png';
+    return 'https://live.fanmingming.com/tv/CGTN.png';
+  }
+  return '';
+}
+
+/* 自然排序：数字段按数值比较，避免 CCTV-10 排在 CCTV-2 前面；
+ * 比较前抹掉连字符/下划线，让 CCTV-1 和 CCTV1 落在同一排序基线 */
+function naturalCmp(x, y) {
+  const sa = String(x).replace(/[-_]/g, '').split(/(\d+)/);
+  const sb = String(y).replace(/[-_]/g, '').split(/(\d+)/);
+  for (let i = 0; i < Math.max(sa.length, sb.length); i++) {
+    const a = sa[i], b = sb[i];
+    if (a === undefined) return -1;
+    if (b === undefined) return 1;
+    if (/^\d+$/.test(a) && /^\d+$/.test(b)) {
+      const d = +a - +b;
+      if (d) return d;
+    } else if (a !== b) {
+      return a < b ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
+/* 聚合频道默认线路：优先「默认」源，其次按 sources.json 顺序取第一个 */
+function pickDefaultItem(agg) {
+  const def = agg.items.find((it) => it.src.name === '默认' || it.src.id === 'self-iptv-api');
+  return def || agg.items[0];
+}
 
 /* ---------- 外部播放器（只有 macOS app 里有这个原生桥） ---------- */
 
@@ -36,6 +171,7 @@ async function probeNative() {
 async function probePlayers() {
   const r = await probeNative();
   hasEmbeddedPlayer = r.embedded;
+  if (r.version) window.__appVersion = r.version;
   return r.players;
 }
 
@@ -107,6 +243,7 @@ async function mpvPlay(url) {
   startMpvRectWatch();
   await mpvCall('play', { url });
   await mpvCall('setopt', { key: 'hwdec', value: settings.hwdec ? 'videotoolbox' : 'no' });
+  await mpvCall('overlay', { hidden: false }); // 确保画面层可见（暂停时会被隐藏）
   // mpv 内核的音量跟随全局设置（新内核默认 100，得推一次）
   applyVolume(curVol(), false);
 }
@@ -117,6 +254,27 @@ async function mpvStop() {
   stopMpvRectWatch();
   await mpvCall('stop');
 }
+
+// 原生菜单栏 → 网页 的入口（main.swift 用 evaluateJavaScript 调它）
+window.__kaitaiMenu = function (action) {
+  switch (action) {
+    case 'pause': $('pause').click(); break;
+    case 'retry': $('retry').click(); break;
+    case 'copy':
+      if (state.current) navigator.clipboard.writeText(state.current.url);
+      break;
+    case 'settings': $('settingsBtn').click(); break;
+    case 'checkupd': { const b = $('checkupd'); if (!b.hidden) b.click(); break; }
+    case 'update': { const b = $('update'); if (!b.hidden) b.click(); break; }
+    case 'view-sources': saveSettings({ view: 'sources' }); break;
+    case 'view-channels': saveSettings({ view: 'channels' }); break;
+  }
+};
+
+// 原生「在浏览器打开」先取当前直链，再交给 NSWorkspace
+window.__kaitaiCurrentURL = function () {
+  return state.current ? state.current.url : '';
+};
 
 // 原生 → 网页 的回调入口（main.swift 用 evaluateJavaScript 调它）
 window.__mpv = function (kind, text) {
@@ -149,19 +307,50 @@ function curVol() {
   return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 100;
 }
 
+/* 平面风格的音量图标（线性 SVG，跟随文字色，替代 emoji） */
+const VOL_ON =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>';
+const VOL_OFF =
+  '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>';
+
 function applyVolume(v, persist) {
   if (persist) {
     try { localStorage.setItem(VOL_KEY, String(v)); } catch (e) {}
   }
-  $('volico').textContent = v > 0 ? '🔊' : '🔇';
+  $('vol').value = v;
+  $('volico').innerHTML = v > 0 ? VOL_ON : VOL_OFF;
   if (mpvOn) mpvCall('volume', { value: v });
   const video = $('video');
   video.muted = v === 0;
   video.volume = v / 100;
 }
 
+/* 暂停/播放状态图标：暂停时常驻，恢复播放后短暂显示再淡出 */
+const STATE_PAUSE =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4.5" height="16" rx="1.5"/><rect x="13.5" y="4" width="4.5" height="16" rx="1.5"/></svg>';
+const STATE_PLAY =
+  '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.8c0-1.2 1.3-1.9 2.3-1.3l11 6.9c1 .6 1 2 0 2.6l-11 6.9c-1 .6-2.3-.1-2.3-1.3V4.8z"/></svg>';
+
+let playStateTimer = null;
+
+function showPlayState(paused) {
+  const el = $('playState');
+  // 连接中/失败等覆盖层显示时不抢镜
+  if (!$('overlay').classList.contains('hide')) {
+    el.classList.remove('show');
+    return;
+  }
+  $('playStateBadge').innerHTML = paused ? STATE_PAUSE : STATE_PLAY;
+  el.classList.add('show');
+  clearTimeout(playStateTimer);
+  if (!paused) {
+    playStateTimer = setTimeout(() => el.classList.remove('show'), 700);
+  }
+}
+
 function setPauseUI(paused) {
   $('pause').textContent = paused ? '▶ 播放' : '⏸ 暂停';
+  showPlayState(paused);
 }
 
 function enablePause(on) {
@@ -204,8 +393,26 @@ async function boot() {
 
   const want = new URLSearchParams(location.search).get('src');
   const first = state.sources.find((s) => s.id === want) || state.sources[0];
+  // 支持 ?view=channels|sources 直连某个视图（分享链接/自动化截图用）
+  const vp = new URLSearchParams(location.search).get('view');
+  if (vp === 'channels' || vp === 'sources') settings.view = vp;
+  renderView();
   const restored = await restoreLastChannel();
-  if (!restored && first) selectSource(first);
+  if (!restored && settings.view !== 'channels' && first) selectSource(first);
+}
+
+/* 按设置里的视图渲染侧边栏（播放源视图 / 频道视图） */
+function renderView() {
+  const channels = settings.view === 'channels';
+  $('sources').style.display = channels ? 'none' : '';
+  $('srcTitle').style.display = channels ? 'none' : '';
+  $('catTitle').textContent = channels ? '分类' : '分组';
+  if (channels) {
+    loadAllSources().then(() => { renderGroups(); renderList(); });
+  } else {
+    renderGroups();
+    renderList();
+  }
 }
 
 /* 应用自更新：检查 GitHub Releases → 可升级时按钮变成「升级到 vX.Y.Z」 */
@@ -226,8 +433,8 @@ function setupAppUpdate() {
   btn._check = async function ({ silent } = {}) {
     try {
       const r = await nativeBridge.postMessage({ action: 'appupdate', op: 'check' });
-      if (r && r.current && $('aboutVersion').textContent === '—') {
-        $('aboutVersion').textContent = 'v' + r.current + ' · Full/Lite 同步发布';
+      if (r && r.current && $('aboutVersionDetail').textContent === '—') {
+        $('aboutVersionDetail').textContent = 'v' + r.current + ' · 与 GitHub Releases 同步';
       }
       if (!r || !r.hasUpdate || !r.zipURL) {
         if (!silent) reset('已是最新');
@@ -270,15 +477,17 @@ function setupAppUpdate() {
 
 const SET_KEY = 'kaitai-settings';
 const settings = Object.assign(
-  { theme: 'light', density: 'normal', resume: true, hwdec: true,
-    autoCheck: true, autoInstall: true },
+  { theme: 'light', view: 'channels', density: 'normal', resume: true, hwdec: true,
+    hotkeys: true, autoCheck: true, autoInstall: true },
   JSON.parse(localStorage.getItem(SET_KEY) || '{}')
 );
 
 function saveSettings(patch) {
+  const viewChanged = 'view' in patch && patch.view !== settings.view;
   Object.assign(settings, patch);
   try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) {}
   applySettings();
+  if (viewChanged) renderView();
 }
 
 const sysDark = window.matchMedia('(prefers-color-scheme: dark)');
@@ -293,6 +502,7 @@ function applySettings() {
 sysDark.addEventListener('change', () => { if (settings.theme === 'system') applySettings(); });
 
 function bindSettingsUI() {
+  window.__bindDone = true; // 自检标记：绑定流程是否跑过
   $('settingsBtn').addEventListener('click', () => { $('settingsScrim').hidden = false; });
   $('settingsClose').addEventListener('click', () => { $('settingsScrim').hidden = true; });
   $('settingsScrim').addEventListener('click', (e) => {
@@ -312,6 +522,7 @@ function bindSettingsUI() {
     sync();
   };
   seg('setTheme', 'theme');
+  seg('setView', 'view');
   seg('setDensity', 'density');
 
   const sw = (id, key) => {
@@ -325,8 +536,24 @@ function bindSettingsUI() {
   };
   sw('setResume', 'resume');
   sw('setHwdec', 'hwdec');
+  sw('setHotkeys', 'hotkeys');
   sw('setAutoCheck', 'autoCheck');
   sw('setAutoInstall', 'autoInstall');
+
+  // 设置面板里的「更新播放源」：关面板后在侧边栏底部状态区看进度
+  $('setUpdateSources').addEventListener('click', () => {
+    const b = $('update');
+    $('settingsScrim').hidden = true;
+    if (!b.hidden) b.click();
+  });
+
+  // 关于里的「检查更新」：不关面板，直接把结果写进版本详情
+  $('setCheckUpdate').addEventListener('click', () => { $('checkupd').click(); });
+
+  // 当前版本详情（原生桥 probe 时带回）
+  if (window.__appVersion) {
+    $('aboutVersionDetail').textContent = 'v' + window.__appVersion;
+  }
 
   // 无内嵌内核时隐藏播放设置（网页版不涉及 mpv）
   if (!hasEmbeddedPlayer) $('setPlaySection').hidden = true;
@@ -347,10 +574,24 @@ async function restoreLastChannel() {
   let last = null;
   try { last = JSON.parse(localStorage.getItem('kaitai-last') || 'null'); } catch (e) {}
   if (!last || !last.url) return false;
+
+  // 频道视图：直接在聚合表里找这条直链，播放
+  if (settings.view === 'channels') {
+    if (!aggLoaded) await loadAllSources();
+    for (const a of state.aggregated) {
+      const it = a.items.find((x) => x.ch.url === last.url);
+      if (it) {
+        playChannel(it.ch, it.src);
+        return true;
+      }
+    }
+    return false;
+  }
+
   const src = state.sources.find((s) => s.id === last.src);
   if (!src) return false;
   await selectSource(src);
-  const ch = [...document.querySelectorAll('.ch')].find((e) => e.dataset.url === last.url);
+  const ch = [...document.querySelectorAll('.chan')].find((e) => e.dataset.url === last.url);
   if (!ch) return false;
   ch.click();
   return true;
@@ -577,25 +818,52 @@ async function selectSource(src) {
   }
 
   state.groups = [...new Set(state.channels.map((c) => c.group))];
+  state.activeGroup = '';
   renderGroups();
   renderList();
 }
 
+/* 侧边栏第二区：播放源视图渲染分组行，频道视图渲染五大类 */
 function renderGroups() {
-  const sel = $('group');
-  sel.innerHTML = '<option value="">全部分组（' + state.channels.length + '）</option>';
+  const box = $('groups');
+  box.innerHTML = '';
+
+  const mk = (label, val, n) => {
+    const b = document.createElement('button');
+    b.className = 'gitem' + ((settings.view === 'channels' ? state.activeCat : state.activeGroup) === val ? ' on' : '');
+    b.innerHTML =
+      '<span class="gname">' + escapeHtml(label) + '</span>' +
+      '<span class="gn">' + n + '</span>';
+    b.addEventListener('click', () => {
+      if (settings.view === 'channels') state.activeCat = val;
+      else state.activeGroup = val;
+      box.querySelectorAll('.gitem').forEach((x) => x.classList.toggle('on', x === b));
+      renderList();
+    });
+    box.appendChild(b);
+  };
+
+  if (settings.view === 'channels') {
+    mk('央视频道', '央视频道', state.aggregated.filter((a) => a.cat === '央视频道').length);
+    mk('卫视频道', '卫视频道', state.aggregated.filter((a) => a.cat === '卫视频道').length);
+    mk('港澳台', '港澳台', state.aggregated.filter((a) => a.cat === '港澳台').length);
+    mk('其他', '其他', state.aggregated.filter((a) => a.cat === '其他').length);
+    mk('全部频道', '', state.aggregated.length);
+    return;
+  }
+
+  mk('全部频道', '', state.channels.length);
   state.groups.forEach((g) => {
-    const n = state.channels.filter((c) => c.group === g).length;
-    const o = document.createElement('option');
-    o.value = g;
-    o.textContent = g + '（' + n + '）';
-    sel.appendChild(o);
+    mk(g, g, state.channels.filter((c) => c.group === g).length);
   });
 }
 
 function renderList() {
+  if (settings.view === 'channels') return renderChannelList();
+  if (!state.channels.length) return; // 启动早期列表还没载入，保持「加载中…」
+
   const q = $('q').value.trim().toLowerCase();
-  const g = $('group').value;
+  const g = state.activeGroup;
   const rows = state.channels.filter((c) => {
     if (g && c.group !== g) return false;
     if (q && !c.name.toLowerCase().includes(q)) return false;
@@ -607,6 +875,7 @@ function renderList() {
 
   const box = $('list');
   const frag = document.createDocumentFragment();
+  state.visibleRows = [];
 
   // 同一频道可能有多个备用源（同名多条），加序号区分，避免看起来像重复 bug
   const nameCount = {};
@@ -614,10 +883,11 @@ function renderList() {
   const seen = {};
 
   rows.forEach((c) => {
+    state.visibleRows.push({ ch: c, src: state.activeSource });
     const isDup = nameCount[c.name] > 1;
     const idx = (seen[c.name] = (seen[c.name] || 0) + 1);
-    const el = document.createElement('div');
-    el.className = 'ch' + (state.current && state.current.url === c.url ? ' on' : '');
+    const el = document.createElement('button');
+    el.className = 'chan' + (state.current && state.current.url === c.url ? ' on' : '');
     el.dataset.url = c.url;
 
     const img = document.createElement('img');
@@ -631,7 +901,7 @@ function renderList() {
 
     const nm = document.createElement('div');
     nm.className = 'nm';
-    nm.textContent = isDup ? c.name + ' ·' + idx : c.name;
+    nm.textContent = isDup ? stripQual(c.name) + ' ·' + idx : stripQual(c.name);
 
     const gp = document.createElement('div');
     gp.className = 'gp';
@@ -644,21 +914,126 @@ function renderList() {
 
   box.innerHTML = '';
   box.appendChild(frag);
+
+  // 当前频道在列表里的位置保持可见（换台/恢复后不丢）
+  const cur = box.querySelector('.chan.on');
+  if (cur) cur.scrollIntoView({ block: 'nearest' });
+}
+
+/* 频道视图：跨源聚合列表。点行直接播（默认源优先），换源走信息条上的线路按钮 */
+function renderChannelList() {
+  const q = $('q').value.trim().toLowerCase();
+  const cat = state.activeCat;
+  const rows = state.aggregated.filter((a) => {
+    if (cat && a.cat !== cat) return false;
+    if (q && !a.name.toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  $('count').textContent =
+    '显示 ' + rows.length + ' / ' + state.aggregated.length + ' 个频道';
+
+  const box = $('list');
+  const frag = document.createDocumentFragment();
+  state.visibleRows = [];
+
+  rows.forEach((a) => {
+    const pick = pickDefaultItem(a);
+    state.visibleRows.push({ ch: pick.ch, src: pick.src });
+    const playing = state.current && a.items.some((it) => it.ch.url === state.current.url);
+
+    const btn = document.createElement('button');
+    btn.className = 'chan' + (playing ? ' on' : '');
+
+    const img = document.createElement('img');
+    img.alt = '';
+    img.loading = 'lazy';
+    img.referrerPolicy = 'no-referrer';
+    img.style.visibility = 'hidden';
+    img.addEventListener('load', () => { img.style.visibility = 'visible'; });
+    // 高清台标加载失败时回退到源里带的 logo
+    img.addEventListener('error', () => {
+      if (a.fallbackLogo && img.dataset.stage !== 'fb') {
+        img.dataset.stage = 'fb';
+        img.src = a.fallbackLogo;
+      } else {
+        img.style.visibility = 'hidden';
+      }
+    });
+    if (a.logo) img.src = a.logo;
+
+    const col = document.createElement('div');
+    col.className = 'col';
+    const nm = document.createElement('div');
+    nm.className = 'nm';
+    nm.textContent = a.name;
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.textContent = a.items.length + ' 个源 · ' + a.cat;
+    col.append(nm, meta);
+
+    btn.append(img, col);
+    btn.addEventListener('click', () => playChannel(pick.ch, pick.src));
+    frag.appendChild(btn);
+  });
+
+  box.innerHTML = '';
+  box.appendChild(frag);
+
+  const cur = box.querySelector('.chan.on');
+  if (cur) cur.scrollIntoView({ block: 'nearest' });
 }
 
 /* ---------- 播放 ---------- */
 
-function playChannel(ch) {
+/* 播放信息条上的源切换：当前频道有多个源时显示，点一下换源接着播 */
+function renderSrcSwitch() {
+  const box = $('srcSwitch');
+  box.innerHTML = '';
+  if (!state.current) return;
+  const agg = state.aggregated.find((a) =>
+    a.items.some((it) => it.ch.url === state.current.url));
+  if (!agg || agg.items.length < 2) return;
+
+  const labelCount = {};
+  agg.items.forEach((it) => {
+    let label = it.src.name;
+    if (it.ch.name !== agg.name) {
+      const q = qualTag(it.ch.name);
+      label += ' · ' + (q || it.ch.name);
+    }
+    if (labelCount[label]) {
+      labelCount[label] += 1;
+      label += ' ' + labelCount[label];
+    } else {
+      labelCount[label] = 1;
+    }
+
+    const b = document.createElement('button');
+    b.className = 'ss-btn' + (state.current.url === it.ch.url ? ' on' : '');
+    b.textContent = label;
+    b.title = '切换到 ' + it.src.name + ' 的线路：' + it.ch.url;
+    b.addEventListener('click', () => playChannel(it.ch, it.src));
+    box.appendChild(b);
+  });
+}
+
+function playChannel(ch, src) {
+  // 频道视图播放时带上了所属源：同步高亮 + 修复「上次频道」记录
+  if (src) {
+    state.activeSource = src;
+    document.querySelectorAll('.src').forEach((b) => {
+      b.classList.toggle('on', b.dataset.id === src.id);
+    });
+  }
   state.current = ch;
   rememberChannel();
-  document.querySelectorAll('.ch').forEach((el) => {
+  document.querySelectorAll('.chan').forEach((el) => {
     el.classList.toggle('on', el.dataset.url === ch.url);
   });
 
-  $('now').textContent = ch.name + (ch.group ? ' · ' + ch.group : '');
-  $('url').textContent = ch.url;
-  $('url').title = ch.url;
-  $('ext').href = ch.url;
+  $('now').textContent = stripQual(ch.name) + (ch.group ? ' · ' + ch.group : '');
+  renderSrcSwitch();
   const pb = $('player');
   if (pb && !pb.hidden) pb.disabled = false;
   setOverlay('正在连接…', ch.url, false);
@@ -933,7 +1308,53 @@ function escapeHtml(s) {
 /* ---------- 交互绑定 ---------- */
 
 $('q').addEventListener('input', renderList);
-$('group').addEventListener('change', renderList);
+
+/* ---------- 键盘快捷键（播放器相关） ---------- */
+
+// 在当前可见频道列表里向上/向下换台
+function stepChannel(dir) {
+  const rows = state.visibleRows || [];
+  if (!rows.length) return;
+  let idx = rows.findIndex((r) => r.ch.url === state.current?.url);
+  idx = idx < 0 ? 0 : (idx + dir + rows.length) % rows.length;
+  playChannel(rows[idx].ch, rows[idx].src);
+}
+
+function toggleMute() {
+  if (curVol() > 0) {
+    state.prevVol = curVol();
+    applyVolume(0, true);
+  } else {
+    applyVolume(state.prevVol || 50, true);
+  }
+}
+
+function toggleFullscreen() {
+  if (mpvOn) {
+    mpvCall('fullscreen');
+    return;
+  }
+  if (document.fullscreenElement) document.exitFullscreen();
+  else $('screen').requestFullscreen?.().catch(() => {});
+}
+
+document.addEventListener('keydown', (e) => {
+  if (!settings.hotkeys) return;
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  const tag = (e.target.tagName || '').toLowerCase();
+  if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
+
+  switch (e.key) {
+    case ' ': e.preventDefault(); $('pause').click(); break;
+    case 'ArrowUp': e.preventDefault(); stepChannel(-1); break;
+    case 'ArrowDown': e.preventDefault(); stepChannel(1); break;
+    case 'ArrowLeft': e.preventDefault(); applyVolume(Math.max(0, curVol() - 5), true); break;
+    case 'ArrowRight': e.preventDefault(); applyVolume(Math.min(100, curVol() + 5), true); break;
+    case 'm': case 'M': toggleMute(); break;
+    case 'f': case 'F': toggleFullscreen(); break;
+    case 'r': case 'R': $('retry').click(); break;
+  }
+});
 
 $('retry').addEventListener('click', () => {
   if (!state.current) return;
@@ -950,6 +1371,8 @@ $('pause').addEventListener('click', () => {
   if (mpvOn) {
     mpvPaused = !mpvPaused;
     mpvCall('pause', { paused: mpvPaused });
+    // 暂停时隐藏 mpv 画面层，让网页的暂停图标露出来；恢复播放时再显示画面
+    mpvCall('overlay', { hidden: mpvPaused });
     setPauseUI(mpvPaused);
     return;
   }
@@ -957,33 +1380,19 @@ $('pause').addEventListener('click', () => {
   if (video.paused) video.play().catch(() => {});
   else video.pause();
 });
+
+/* 点画面切换暂停/播放（连接中或出错时不响应） */
+$('screen').addEventListener('click', () => {
+  if ($('pause').disabled) return;
+  if (!$('overlay').classList.contains('hide')) return;
+  $('pause').click();
+});
 $('video').addEventListener('pause', () => setPauseUI(true));
 $('video').addEventListener('play', () => setPauseUI(false));
 
 /* 音量：内嵌走 mpv，网页版走 <video>；设置持久化 */
 $('vol').addEventListener('input', (e) => applyVolume(+e.target.value || 0, true));
 $('vol').value = curVol();
-
-$('copy').addEventListener('click', async () => {
-  if (!state.current) return;
-  const btn = $('copy');
-  const url = state.current.url;
-  try {
-    await navigator.clipboard.writeText(url);
-  } catch (e) {
-    const ta = document.createElement('textarea');
-    ta.value = url;
-    document.body.appendChild(ta);
-    ta.select();
-    document.execCommand('copy');
-    ta.remove();
-  }
-  btn.textContent = '已复制';
-  btn.classList.add('ok');
-  setTimeout(() => {
-    btn.textContent = '复制直链';
-    btn.classList.remove('ok');
-  }, 1600);
-});
+applyVolume(curVol(), false); // 启动即渲染音量图标与初始状态
 
 boot();

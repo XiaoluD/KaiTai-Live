@@ -341,6 +341,12 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
             DispatchQueue.main.async { view.setPaused(paused) }
             reply(["ok": true], nil)
 
+        case "overlay":
+            // 暂停时隐藏 mpv 层，露出网页里的暂停/播放状态图标
+            let hidden = body["hidden"] as? Bool ?? false
+            DispatchQueue.main.async { view.isHidden = hidden }
+            reply(["ok": true], nil)
+
         case "volume":
             let v = body["value"] as? Double ?? 100
             DispatchQueue.main.async { view.setVolume(v) }
@@ -379,6 +385,16 @@ extension WKWebView {
         evaluateJavaScript("window.__mpv && window.__mpv.apply(null, \(arr));",
                            completionHandler: nil)
     }
+}
+
+// MARK: - 顶栏拖动条：WKWebView 吃掉所有鼠标事件，窗口拖不动；
+// 在顶部放一条透明视图，把鼠标按下转成窗口拖动（避开左侧红绿灯 80px）
+
+final class DragStripView: NSView {
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
+    }
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
 
 // MARK: - App
@@ -421,6 +437,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             backing: .buffered,
             defer: false
         )
+        // 标题栏融入界面：内容延伸到标题栏下、透明标题栏、隐藏标题文字，
+        // 红绿灯直接悬浮在网页顶栏上（顶栏给左侧留出 80px）
+        win.styleMask.insert(.fullSizeContentView)
+        win.titlebarAppearsTransparent = true
+        win.titleVisibility = .hidden
+        win.isMovableByWindowBackground = true
         win.title = "开台"
         win.minSize = NSSize(width: 900, height: 600)
         win.center()
@@ -490,6 +512,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         #endif
 
         win.contentView = container
+
+        // 顶栏拖动条：盖在所有视图最上层（含 mpv 层），只占顶部 52px 且避开红绿灯
+        let dragStrip = DragStripView(frame: NSRect(x: 80, y: 840 - 52, width: 1280 - 80, height: 52))
+        dragStrip.autoresizingMask = [.width, .minYMargin]
+        container.addSubview(dragStrip, positioned: .above, relativeTo: nil)
+
         win.makeKeyAndOrderFront(nil)
         NSApp.activate(ignoringOtherApps: true)
 
@@ -544,6 +572,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         true
     }
 
+    // 自检：IPTV_MENU_TEST=1 时 3 秒后逐个检查菜单接线并触发「设置…」，
+    // 验证 target/action → menuAction → evaluateJavaScript 这条链路
+    func applicationDidBecomeActive(_ notification: Notification) {
+        guard ProcessInfo.processInfo.environment["IPTV_MENU_TEST"] != nil else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { [weak self] in
+            guard let main = NSApp.mainMenu else {
+                NSLog("[IPTV] 菜单自检失败: mainMenu 为空")
+                return
+            }
+            for item in main.items {
+                guard let sub = item.submenu else { continue }
+                for it in sub.items {
+                    NSLog("[IPTV] 菜单自检: [%@] %@ | target=%@ enabled=%@",
+                          item.title, it.title,
+                          it.target.map { String(describing: type(of: $0)) } ?? "nil",
+                          it.isEnabled ? "yes" : "no")
+                    if it.title.contains("设置"), let act = it.action {
+                        let ok = NSApp.sendAction(act, to: it.target, from: it)
+                        NSLog("[IPTV] 菜单自检: sendAction(设置…) = %@", ok ? "true" : "false")
+                    }
+                }
+            }
+            // 先探一下 JS 环境状态，再看动作效果
+            self?.webView?.evaluateJavaScript(
+                "(function(){" +
+                "var out={};out.menu=typeof window.__kaitaiMenu;" +
+                "var btn=document.getElementById('settingsBtn');out.btn=!!btn;" +
+                "btn.click();" +
+                "out.scrimAfterClick=document.getElementById('settingsScrim').hidden;" +
+                "out.listener=typeof window.__bindDone;" +
+                "return JSON.stringify(out);})()",
+                completionHandler: { r, _ in
+                    NSLog("[IPTV] 菜单自检: JS分解测试 = %@", String(describing: r))
+                })
+            DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+                self?.webView?.evaluateJavaScript(
+                    "document.getElementById('settingsScrim').hidden",
+                    completionHandler: { r, _ in
+                        NSLog("[IPTV] 菜单自检: settingsScrim.hidden = %@", String(describing: r))
+                        NSApp.terminate(nil)
+                    })
+            }
+        }
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         server?.stop()
         server = nil
@@ -556,10 +629,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         let appMenu = NSMenu()
         appMenu.addItem(withTitle: "关于开台", action: nil, keyEquivalent: "")
         appMenu.addItem(.separator())
+        appMenu.addItem(menuItem("检查更新", action: "checkupd", key: "u"))
+        appMenu.addItem(menuItem("设置…", action: "settings", key: ","))
+        appMenu.addItem(.separator())
         appMenu.addItem(withTitle: "隐藏开台", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
         appMenu.addItem(withTitle: "退出开台", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         mainMenu.addItem(appItem)
+
+        let playItem = NSMenuItem()
+        let playMenu = NSMenu(title: "播放")
+        playMenu.addItem(menuItem("暂停 / 继续", action: "pause", key: "p"))
+        playMenu.addItem(menuItem("重试当前频道", action: "retry", key: "r", shift: true))
+        playMenu.addItem(menuItem("复制当前频道直链", action: "copy", key: "c", shift: true))
+        playMenu.addItem(menuItem("在浏览器打开当前直链", action: "", key: "o", shift: true,
+                                  selector: #selector(openCurrentURLInBrowser(_:))))
+        playItem.submenu = playMenu
+        mainMenu.addItem(playItem)
+
+        let srcItem = NSMenuItem()
+        let srcMenu = NSMenu(title: "源")
+        srcMenu.addItem(menuItem("更新播放源", action: "update", key: "u", shift: true))
+        srcItem.submenu = srcMenu
+        mainMenu.addItem(srcItem)
 
         let editItem = NSMenuItem()
         let editMenu = NSMenu(title: "编辑")
@@ -570,7 +662,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let viewItem = NSMenuItem()
         let viewMenu = NSMenu(title: "显示")
-        viewMenu.addItem(withTitle: "重新载入", action: #selector(reload(_:)), keyEquivalent: "r")
+        let rl = NSMenuItem(title: "重新载入", action: #selector(reload(_:)), keyEquivalent: "r")
+        rl.target = self  // 不设 target 走 responder chain 无人响应 reload:，菜单会一直无效
+        viewMenu.addItem(rl)
+        viewMenu.addItem(.separator())
+        viewMenu.addItem(menuItem("播放源视图", action: "view-sources", key: "1"))
+        viewMenu.addItem(menuItem("频道视图", action: "view-channels", key: "2"))
+        viewMenu.addItem(.separator())
         let fs = NSMenuItem(title: "全屏", action: #selector(toggleFullScreen(_:)),
                             keyEquivalent: "f")
         fs.keyEquivalentModifierMask = [.control, .command]
@@ -579,6 +677,50 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         mainMenu.addItem(viewItem)
 
         NSApp.mainMenu = mainMenu
+    }
+
+    /// 菜单项统一走 representedObject 里的动作名，转发给网页端的 window.__kaitaiMenu
+    private func menuItem(_ title: String, action: String, key: String, shift: Bool = false,
+                          selector: Selector? = nil) -> NSMenuItem {
+        let act = selector ?? #selector(menuAction(_:))
+        let item = NSMenuItem(title: title, action: act, keyEquivalent: key)
+        item.target = self
+        item.representedObject = action
+        if shift { item.keyEquivalentModifierMask = [.command, .shift] }
+        return item
+    }
+
+    /// 「在浏览器打开当前直链」：先从网页取当前频道的 url，再交给系统默认浏览器
+    /// （WKWebView 不会自动响应 target=_blank，必须走 NSWorkspace）
+    @objc private func openCurrentURLInBrowser(_ sender: NSMenuItem) {
+        webView?.evaluateJavaScript(
+            "window.__kaitaiCurrentURL ? window.__kaitaiCurrentURL() : '';",
+            completionHandler: { result, _ in
+                guard let s = result as? String, !s.isEmpty,
+                      let url = URL(string: s) else {
+                    NSLog("[IPTV] 浏览器打开失败：当前没有可打开的直链")
+                    return
+                }
+                NSLog("[IPTV] 交给浏览器: %@", url.absoluteString)
+                NSWorkspace.shared.open(url)
+            })
+    }
+
+    @objc private func menuAction(_ sender: NSMenuItem) {
+        guard let act = sender.representedObject as? String,
+              let data = try? JSONSerialization.data(withJSONObject: [act]),
+              let json = String(data: data, encoding: .utf8) else {
+            NSLog("[IPTV] 菜单动作缺失 representedObject")
+            return
+        }
+        NSLog("[IPTV] 菜单动作: %@", act)
+        webView?.evaluateJavaScript(
+            "window.__kaitaiMenu && window.__kaitaiMenu(\(json));",
+            completionHandler: { _, err in
+                if let err {
+                    NSLog("[IPTV] 菜单 JS 执行失败: %@", err.localizedDescription)
+                }
+            })
     }
 
     @objc private func toggleFullScreen(_ sender: Any?) {
