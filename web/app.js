@@ -568,9 +568,9 @@ function bindSettingsUI() {
   // 关于里的「检查更新」：不关面板，直接把结果写进版本详情
   $('setCheckUpdate').addEventListener('click', () => { $('checkupd').click(); });
 
-  // 当前版本详情（原生桥 probe 时带回）
+  // 当前版本详情（原生桥启动时注入 window.__appVersion）
   if (window.__appVersion) {
-    $('aboutVersionDetail').textContent = 'v' + window.__appVersion;
+    $('aboutVersionDetail').textContent = 'v' + window.__appVersion + ' · 与 GitHub Releases 同步';
   }
 
   // 无内嵌内核时隐藏播放设置（网页版不涉及 mpv）
@@ -1347,17 +1347,60 @@ function toggleMute() {
   }
 }
 
-function toggleFullscreen() {
-  if (mpvOn) {
-    mpvCall('fullscreen');
-    return;
-  }
-  if (document.fullscreenElement) document.exitFullscreen();
-  else $('screen').requestFullscreen?.().catch(() => {});
+/* ---------- 播放器全屏：隐藏侧边栏/顶栏，画面铺满整个屏幕 ---------- */
+let fsIdleTimer = null;
+
+function isFsMode() { return document.body.classList.contains('fs-mode'); }
+
+function fsWake() {
+  document.body.classList.remove('fs-idle');
+  clearTimeout(fsIdleTimer);
+  fsIdleTimer = setTimeout(() => document.body.classList.add('fs-idle'), 2600);
 }
 
-// 全屏按钮：toggle（内嵌版走 mpv 原生全屏，网页版走 Fullscreen API）
+function enterFsMode() {
+  document.body.classList.add('fs-mode');
+  fsWake();
+  if (mpvOn) {
+    mpvCall('fullscreen');   // 系统全屏 + UI 隐藏后 #screen 铺满窗口 → 画面真全屏
+  } else {
+    $('screen').requestFullscreen?.().catch(() => {});
+  }
+}
+
+function exitFsMode() {
+  document.body.classList.remove('fs-mode', 'fs-idle');
+  clearTimeout(fsIdleTimer);
+  if (mpvOn) {
+    mpvCall('fullscreen');
+  } else if (document.fullscreenElement) {
+    document.exitFullscreen();
+  }
+}
+
+function toggleFullscreen() {
+  if (isFsMode()) exitFsMode();
+  else enterFsMode();
+}
+
+// 全屏按钮：toggle（内嵌版走 mpv 原生全屏 + UI 隐藏，网页版走 Fullscreen API）
 $('fullscreen').addEventListener('click', toggleFullscreen);
+
+// 网页版：浏览器 Esc 退出全屏时同步移除 UI 隐藏态
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement && !mpvOn) {
+    document.body.classList.remove('fs-mode', 'fs-idle');
+    clearTimeout(fsIdleTimer);
+  }
+});
+
+// 全屏中鼠标动一下 → 控制条浮现，2.6s 无操作自动隐藏
+document.addEventListener('mousemove', () => { if (isFsMode()) fsWake(); });
+
+// Esc：任何时候都可退出播放器全屏（不受快捷键开关限制）
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && isFsMode()) exitFsMode();
+});
 
 document.addEventListener('keydown', (e) => {
   if (!settings.hotkeys) return;

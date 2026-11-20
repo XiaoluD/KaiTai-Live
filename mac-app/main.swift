@@ -465,6 +465,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             config.userContentController.addScriptMessageHandler(
                 bridge, contentWorld: .page, name: JSBridge.name)
         }
+        // 注入当前版本号：设置-关于的「版本详情」启动即显示，不用等检查更新
+        let ver = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+        let verScript = WKUserScript(
+            source: "window.__appVersion = '\(ver)';",
+            injectionTime: .atDocumentStart, forMainFrameOnly: true)
+        config.userContentController.addUserScript(verScript)
 
         let wv = WKWebView(frame: NSRect(x: 0, y: 0, width: 1280, height: 840), configuration: config)
         wv.autoresizingMask = [.width, .height]
