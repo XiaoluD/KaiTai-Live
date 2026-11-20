@@ -1,0 +1,33 @@
+name: update-sources
+
+# 每日拉一次上游聚合池；有变化就自动提交。
+# 注：这是本仓库自己的 Actions，不是 fork，无上游 fork 调度限制。
+
+on:
+  schedule:
+    - cron: "17 1 * * *"   # 每天 09:17 北京时间（避开整点高峰，jitter 已含）
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 更新聚合池
+        run: bash scripts/update-sources.sh
+
+      - name: 提交变化
+        run: |
+          git config user.name "kaitai-bot"
+          git config user.email "bot@users.noreply.github.com"
+          git add web/playlists 01-公共源/raw
+          if git diff --cached --quiet; then
+            echo "上游无变化"
+          else
+            git commit -m "chore(sources): 聚合池自动更新 $(date -u +%Y-%m-%d)"
+            git push
+          fi

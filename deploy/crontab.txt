@@ -1,0 +1,12 @@
+# crontab -e  （ECS 上执行，注意确认服务器时区为 Asia/Shanghai）
+#
+# 部署约定：代码放 /opt/iptv，站点根指向 /var/www/iptv（软链或直接指向 /opt/iptv/web）
+
+# 每 6 小时同步公共源（上游也是 6 小时一扫，对齐即可）
+20 */6 * * * /opt/iptv/01-公共源/sync-public.sh  >> /var/log/iptv-sync.log 2>&1
+
+# 每天 07:20 同步自建源（如果你用 Fork 方案，且已在别的机器定时触发 workflow）
+20 7 * * *   /opt/iptv/02-自建Fork/sync-self.sh  >> /var/log/iptv-sync.log 2>&1
+
+# 可选：日志按月切割（logrotate 更规范，这里只给最省事的写法）
+0 3 1 * *    : > /var/log/iptv-sync.log

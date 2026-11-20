@@ -1,0 +1,45 @@
+{
+  "updated": "2026-11-20",
+  "note": "页面按 type 区分：public=公共源（别人维护），self=自建（本机跑 iptv-api 产出）。sources 数组顺序就是界面按钮顺序。带 url 的源支持 App 内「更新源」一键重新拉取；没 url 的（本地生成）会被跳过。removed:true 的条目只留档不显示。",
+  "sources": [
+    {
+      "id": "self-iptv-api",
+      "name": "我的 iptv-api",
+      "type": "self",
+      "file": "playlists/self-iptv-api.m3u",
+      "local": true,
+      "note": "本机跑 iptv-api 生成 | 229 候选 → 31 条实测可用 → 剔除 3 条假链 → 补 CCTV-4/7/11/14/15（longlong 咪咕源，同 authCode）→ 33 条 / 29 个台 | CCTV-4/11/15 为 576p；CCTV-7/15 未过画面复核（黑帧）| 每条过 720p + 0.5MB/s + 广告过滤 + FFmpeg 解码 | 产物在本地，不支持 App 内更新"
+    },
+    {
+      "id": "public-zbds",
+      "name": "vbskycn/iptv",
+      "type": "public",
+      "file": "playlists/public-zbds-ipv4.m3u",
+      "url": "https://live.zbds.top/tv/iptv4.m3u",
+      "note": "vbskycn/iptv 的镜像域名 zbds，上游每 6 小时扫描 | 原始 339 条 → 实测可播 227 条 | 强项：地方台（市县级广电官方 CDN，实测 89% 可播）"
+    },
+    {
+      "id": "public-suxuang",
+      "name": "suxuang",
+      "type": "public",
+      "file": "playlists/public-suxuang.m3u",
+      "url": "https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
+      "note": "1273 条 → 实测可播 177 条 | 强项：港澳台（翡翠台 / 明珠台 / TVB Plus / RTHK / HOY TV / TVBS / Astro AOD）+ 国际新闻 + 历年春晚，其中 67 个频道名是其它源完全没有的"
+    },
+    {
+      "id": "public-iptv-org-cn",
+      "name": "iptv-org · CN",
+      "type": "public",
+      "file": "playlists/public-iptv-org-cn.m3u",
+      "url": "https://iptv-org.github.io/iptv/countries/cn.m3u",
+      "note": "156 条 → 实测可播 43 条 | 强项：CCTV 高清与 4K（CCTV-6 HD / CCTV-8K / Anhui TV 1080p）、TV BRICS / VoA；含少量宗教台可忽略"
+    },
+    {
+      "id": "public-imdazui-cctv",
+      "removed": true,
+      "name": "imDazui · CCTV（已撤销）",
+      "type": "public",
+      "note": "2026-11-20 逐站实测 413/413 全部不可达（171 条 502 反代故障 / 102 条 502 / 77 条电信专网超时 / 47 条 cmvideo 令牌过期 404 / 16 条 pptv 接口下线 404），按钮已移除。原始 m3u 转存 02-自建Fork/raw/ 仅供 iptv-api 当原料。"
+    }
+  ]
+}

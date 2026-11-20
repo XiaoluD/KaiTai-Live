@@ -1,0 +1,211 @@
+#!/usr/bin/env bash
+# 构建「开台」.app（原生，无 Electron）
+#
+# 用法:
+#   ./mac-app/build.sh                  # 精简版（默认）：不内嵌播放器内核，840 KB
+#   VARIANT=embedded ./mac-app/build.sh # 内嵌版：预留，需接入 libmpv 后生效
+#
+# 两个版本共用同一套前端和启动逻辑，差别只在：
+#   - 是否内嵌播放器内核（决定能不能播 FLV / 组播）
+#   - 包体积与许可证（内嵌 libmpv 后整个包需按 GPLv2+ 分发）
+set -euo pipefail
+
+HERE="$(cd "$(dirname "$0")" && pwd)"
+ROOT="$(cd "$HERE/.." && pwd)"
+VARIANT="${VARIANT:-lite}"
+ARCH="$(uname -m)"
+APP_VERSION="${APP_VERSION:-1.0.0}"
+
+case "$VARIANT" in
+  lite)
+    APP_NAME="开台"
+    BUNDLE_ID="io.github.xiaolud.kaitai"
+    ;;
+  embedded)
+    APP_NAME="开台 Full"
+    BUNDLE_ID="io.github.xiaolud.kaitai.embedded"
+    ;;
+  *)
+    echo "未知 VARIANT=${VARIANT}（可选 lite / embedded）" >&2
+    exit 2
+    ;;
+esac
+
+APP="$HERE/build/$APP_NAME.app"
+CONTENTS="$APP/Contents"
+BIN_NAME="KaiTai"
+
+echo "== 构建 ${APP_NAME} v${APP_VERSION}（VARIANT=$VARIANT, $ARCH, macOS 13+）"
+rm -rf "$APP"
+mkdir -p "$CONTENTS/MacOS" "$CONTENTS/Resources"
+
+echo "== 编译 Swift"
+SRC=("$HERE/main.swift" "$HERE/Updater.swift")
+FLAGS=(-O -swift-version 5 -target "${ARCH}-apple-macosx13.0")
+FLAGS+=(-framework AppKit -framework WebKit -framework Network)
+
+if [ "$VARIANT" = "embedded" ]; then
+  # libmpv 从哪来找：显式指定 > 本仓库自带的独立前缀 > Homebrew 默认位置
+  if [ -n "${MPV_PREFIX:-}" ]; then
+    PREFIX="$MPV_PREFIX"
+  elif [ -f "$HOME/.kaitai/mpv/opt/mpv/include/mpv/client.h" ]; then
+    PREFIX="$HOME/.kaitai/mpv/opt/mpv"
+  else
+    PREFIX="/opt/homebrew"
+  fi
+
+  if [ ! -f "$PREFIX/include/mpv/client.h" ]; then
+    echo "   找不到 $PREFIX/include/mpv/client.h" >&2
+    echo "   内嵌版需要一个可链接的 libmpv，先跑：" >&2
+    echo "     python3 mac-app/setup-mpv-local.py" >&2
+    exit 3
+  fi
+  echo "   libmpv: $PREFIX"
+  FLAGS+=(-D EMBEDDED)
+  FLAGS+=(-import-objc-header "$HERE/mpv-bridge.h")
+  FLAGS+=(-Xcc -I"$PREFIX/include")
+  FLAGS+=(-L"$PREFIX/lib" -lmpv)
+  # 运行时按绝对路径找 libmpv 及其依赖，本机直跑即可；打包时再由 dylibbundler 收进 app
+  FLAGS+=(-Xlinker -rpath -Xlinker "$PREFIX/lib")
+  # mpv 的 pkgconfig 里列了这些系统框架
+  for fw in Cocoa IOKit QuartzCore CoreMedia AVFoundation CoreFoundation \
+            CoreAudio AudioUnit AudioToolbox OpenGL CoreVideo VideoToolbox; do
+    FLAGS+=(-framework "$fw")
+  done
+  SRC+=("$HERE/MpvPlayer.swift")
+fi
+
+swiftc "${FLAGS[@]}" -o "$CONTENTS/MacOS/$BIN_NAME" "${SRC[@]}"
+
+# 内嵌版：把 libmpv 及其整条动态库依赖链收进 app 包。
+# 不打包的话，分发给别人会因为他们机器上没有 /opt/homebrew 而直接起不来。
+if [ "$VARIANT" = "embedded" ]; then
+  BUNDLER=""
+  for cand in "$HOME/.kaitai/bin/dylibbundler" "$(command -v dylibbundler 2>/dev/null || true)"; do
+    [ -n "$cand" ] && [ -x "$cand" ] && BUNDLER="$cand" && break
+  done
+  if [ -n "$BUNDLER" ]; then
+    echo "== 收拢 libmpv 依赖（dylibbundler）"
+    mkdir -p "$CONTENTS/Frameworks"
+    "$BUNDLER" -of -cd -b \
+      -x "$CONTENTS/MacOS/$BIN_NAME" \
+      -d "$CONTENTS/Frameworks" \
+      -p "@executable_path/../Frameworks" >/dev/null
+    echo "   已收拢 $(ls -1 "$CONTENTS/Frameworks" | wc -l | tr -d ' ') 个动态库"
+
+    # dylibbundler 有时会给同一个库塞两条一模一样的 LC_RPATH，
+    # 新版 dyld 遇到重复 rpath 会直接拒绝加载（duplicate LC_RPATH），必须去重
+    dedup=0
+    for f in "$CONTENTS/Frameworks"/*.dylib; do
+      dups=$(otool -l "$f" 2>/dev/null | grep -A2 LC_RPATH | grep "path " | awk '{print $2}' | sort | uniq -d || true)
+      [ -z "$dups" ] && continue
+      for r in $dups; do
+        cnt=$(otool -l "$f" | grep -A2 LC_RPATH | grep -c -- "path $r " || true)
+        while [ "$cnt" -gt 1 ]; do
+          install_name_tool -delete_rpath "$r" "$f" 2>/dev/null || break
+          cnt=$((cnt - 1))
+        done
+      done
+      codesign --force --sign - "$f" >/dev/null 2>&1 || true
+      dedup=$((dedup + 1))
+    done
+    if [ "$dedup" -gt 0 ]; then echo "   已清理 $dedup 个库的重复 rpath"; fi
+    codesign --force --sign - "$CONTENTS/MacOS/$BIN_NAME" >/dev/null 2>&1 || true
+  else
+    echo "   ⚠️  没找到 dylibbundler，本机可以跑，但发给别人会缺库"
+    echo "      见 README「内嵌版怎么构建」"
+  fi
+fi
+
+echo "== 复制前端资源"
+cp -R "$ROOT/web" "$CONTENTS/Resources/web"
+rm -rf "$CONTENTS/Resources/web/.DS_Store"
+
+echo "== 复制图标"
+# 内嵌版用带 Full 徽章的图标；没有就退回通用图标
+ICON_SRC="$HERE/icon/icon.icns"
+if [ "$VARIANT" = "embedded" ] && [ -f "$HERE/icon/icon-full.icns" ]; then
+  ICON_SRC="$HERE/icon/icon-full.icns"
+fi
+if [ -f "$ICON_SRC" ]; then
+  cp "$ICON_SRC" "$CONTENTS/Resources/icon.icns"
+else
+  echo "   跳过（没找到 $ICON_SRC）"
+fi
+
+# 内嵌版链的是 GPL 构建的 libmpv + ffmpeg，分发时必须带上许可证原文
+if [ "$VARIANT" = "embedded" ]; then
+  cp "$ROOT/LICENSE-GPL-2.0.txt" "$CONTENTS/Resources/" 2>/dev/null || true
+  cat > "$CONTENTS/Resources/THIRD-PARTY.txt" <<'NOTICE'
+本程序（内嵌版）通过 libmpv 链接了以下第三方组件：
+
+  mpv        https://mpv.io                      GPL-2.0-or-later / LGPL-2.1-or-later
+  FFmpeg     https://ffmpeg.org                  GPL-2.0-or-later（Homebrew 构建启用了 GPL 部分）
+  libass     https://github.com/libass/libass    ISC
+  libplacebo https://github.com/haasn/libplacebo LGPL-2.1-or-later
+  MoltenVK   https://github.com/KhronosGroup/MoltenVK  Apache-2.0
+  LuaJIT     https://luajit.org                  MIT
+  其他依赖见 /opt/homebrew/Cellar/mpv 下的各 formula
+
+因此本程序整体按 GNU General Public License v2.0 或更新版本分发，
+许可证原文见同目录 LICENSE-GPL-2.0.txt，源码见项目仓库。
+
+精简版不含上述任何组件，不适用 GPL。
+NOTICE
+  echo "   已写入 GPL 许可证与第三方声明"
+fi
+
+echo "== 写入 Info.plist"
+cat > "$CONTENTS/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleName</key>
+	<string>$APP_NAME</string>
+	<key>CFBundleDisplayName</key>
+	<string>$APP_NAME</string>
+	<key>CFBundleExecutable</key>
+	<string>$BIN_NAME</string>
+	<key>CFBundleIdentifier</key>
+	<string>$BUNDLE_ID</string>
+	<key>CFBundleIconFile</key>
+	<string>icon</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$APP_VERSION</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>GitHubRepo</key>
+	<string>XiaoluD/kaitai</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSPrincipalClass</key>
+	<string>NSApplication</string>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+</dict>
+</plist>
+PLIST
+
+echo "== Ad-hoc 签名"
+codesign --force --deep --sign - "$APP" >/dev/null 2>&1 || echo "   (签名跳过，不影响本机运行)"
+xattr -cr "$APP" 2>/dev/null || true
+
+echo "== 完成"
+du -sh "$APP"
+echo "   双击运行: $APP"

@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>开台 · IPTV</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark">开</span>
+    <span class="brand-name">开台</span>
+  </div>
+
+  <input id="q" class="search" type="search" placeholder="搜索频道…" autocomplete="off">
+
+  <div class="topbar-right">
+    <span class="upd-status" id="updStatus"></span>
+    <button id="update" class="btn ghost" hidden>更新源</button>
+    <button id="checkupd" class="btn ghost" hidden>检查更新</button>
+  </div>
+</header>
+
+<div class="layout">
+
+  <aside class="rail">
+    <div class="rail-title">播放源</div>
+    <nav class="sources" id="sources"></nav>
+    <div class="rail-foot">
+      <select id="group" class="group-select" title="按分组筛选"><option value="">全部分组</option></select>
+      <div class="count" id="count">加载中…</div>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="screen" id="screen">
+      <video id="video" controls playsinline></video>
+      <div class="overlay" id="overlay">
+        <div class="ov-title">选一个频道开始</div>
+        <div class="ov-sub">视频流由本机直连源站，不经任何中转</div>
+      </div>
+    </div>
+
+    <div class="nowbar">
+      <div class="now-main">
+        <div class="now" id="now">未播放</div>
+        <div class="url" id="url">—</div>
+      </div>
+
+      <div class="controls">
+        <button id="pause" class="ctl" disabled>
+          <span class="ctl-ico">⏸</span><span class="ctl-label">暂停</span>
+        </button>
+        <div class="volwrap" id="volwrap" title="音量">
+          <span id="volico">🔊</span>
+          <input id="vol" type="range" min="0" max="100" value="100">
+        </div>
+        <button id="retry" class="ctl" title="重试当前频道">
+          <span class="ctl-ico">↻</span><span class="ctl-label">重试</span>
+        </button>
+        <button id="copy" class="ctl" title="复制直链">
+          <span class="ctl-ico">⧉</span><span class="ctl-label">复制</span>
+        </button>
+        <button id="player" class="ctl primary" hidden>用 IINA 打开</button>
+        <a id="ext" class="ctl" target="_blank" rel="noopener" title="浏览器打开直链">
+          <span class="ctl-ico">↗</span><span class="ctl-label">外链</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="tip" id="tip" hidden></div>
+
+    <div class="grid-head">
+      <span class="grid-title">频道</span>
+    </div>
+    <div class="list" id="list"></div>
+  </main>
+</div>
+
+<script src="./hls.min.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>

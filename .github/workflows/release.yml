@@ -1,0 +1,40 @@
+name: release
+
+# 推 tag（v*）自动构建两个版本的 macOS zip 并发 GitHub Release。
+# runner 是原生 arm64 macOS，Homebrew 安装 mpv 走正常流程（无本机沙箱问题）。
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 安装 libmpv 与工具
+        run: brew install mpv dylibbundler
+
+      - name: 装配 libmpv 本地前缀（版本对齐）
+        run: python3 mac-app/setup-mpv-local.py
+
+      - name: 构建两个版本
+        run: |
+          ./mac-app/build.sh
+          VARIANT=embedded APP_VERSION="${GITHUB_REF_NAME#v}" ./mac-app/build.sh
+
+      - name: 打包 zip
+        run: |
+          mkdir -p dist
+          ditto -c -k --keepParent "mac-app/build/开台.app" "dist/开台-lite-arm64.zip"
+          ditto -c -k --keepParent "mac-app/build/开台 Full.app" "dist/开台-full-arm64.zip"
+
+      - name: 发布 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          generate_release_notes: true

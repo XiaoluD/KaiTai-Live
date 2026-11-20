@@ -1,0 +1,5 @@
+mac-app/build/
+dist/
+.runtime/
+.DS_Store
+*.pyc
