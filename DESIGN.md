@@ -1,7 +1,7 @@
 ---
 version: alpha
-name: KaiTai Night Glass
-description: 开台 IPTV 播放器的产品化设计系统。深色玻璃质感、聚焦播放器、橙粉渐变品牌色（继承应用图标）。
+name: KaiTai Day Glass
+description: 开台 IPTV 播放器的产品化设计系统。浅色为默认（Apple 风格），深色可选、可跟随系统；橙粉渐变品牌色（继承应用图标）。
 ---
 
 ## 设计理念

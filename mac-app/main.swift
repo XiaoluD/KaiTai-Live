@@ -202,6 +202,7 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
             // 返回可用的外部播放器列表，前端据此决定按钮文案
             var payload: [String: Any] = ["players": PlayerBridge.installed().map { $0.name }]
             if embeddedAvailable { payload["embedded"] = true }
+            payload["version"] = AppUpdate.currentVersion
             replyHandler(payload, nil)
 
         case "mpv":
@@ -347,6 +348,18 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
 
         case "fullscreen":
             DispatchQueue.main.async { view.window?.toggleFullScreen(nil) }
+            reply(["ok": true], nil)
+
+        case "setopt":
+            let key = body["key"] as? String ?? ""
+            let value = body["value"] as? String ?? ""
+            guard !key.isEmpty, key.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "-" }) else {
+                reply(nil, "bad key")
+                return
+            }
+            DispatchQueue.main.async {
+                (view as? MpvPlayerView)?.setOption(key, value)
+            }
             reply(["ok": true], nil)
 
         default:

@@ -261,6 +261,15 @@ final class MpvPlayerView: NSView {
         mpv_set_property_string(h, "pause", paused ? "yes" : "no")
     }
 
+    /// 运行时改 mpv 属性（设置面板的硬解开关走这里）
+    func setOption(_ key: String, _ value: String) {
+        guard let h = mpv else { return }
+        let rc = mpv_set_property_string(h, key, value)
+        if rc < 0 {
+            NSLog("[mpv] setopt %@=%@ 失败: %@", key, value, String(cString: mpv_error_string(rc)))
+        }
+    }
+
     func setVolume(_ v: Double) {
         guard let h = mpv else { return }
         var value = max(0, min(100, v))

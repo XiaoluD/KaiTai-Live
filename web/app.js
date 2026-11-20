@@ -106,6 +106,7 @@ async function mpvPlay(url) {
   syncMpvRect();
   startMpvRectWatch();
   await mpvCall('play', { url });
+  await mpvCall('setopt', { key: 'hwdec', value: settings.hwdec ? 'videotoolbox' : 'no' });
   // mpv 内核的音量跟随全局设置（新内核默认 100，得推一次）
   applyVolume(curVol(), false);
 }
@@ -192,11 +193,19 @@ async function boot() {
   setupAppUpdate();
 
   // 「检查更新」只在 App 内出现（网页版没有原生桥）
-  if (nativeBridge) $('checkupd').hidden = false;
+  if (nativeBridge) {
+    $('checkupd').hidden = false;
+    bindSettingsUI();
+    applySettings();
+    if (settings.autoCheck) {
+      setTimeout(() => { const b=$('checkupd'); if (b._check) b._check({ silent: true }); }, 8000);
+    }
+  }
 
   const want = new URLSearchParams(location.search).get('src');
   const first = state.sources.find((s) => s.id === want) || state.sources[0];
-  if (first) selectSource(first);
+  const restored = await restoreLastChannel();
+  if (!restored && first) selectSource(first);
 }
 
 /* 应用自更新：检查 GitHub Releases → 可升级时按钮变成「升级到 vX.Y.Z」 */
@@ -204,6 +213,44 @@ function setupAppUpdate() {
   const btn = $('checkupd');
   if (!nativeBridge) return;
   let pending = null;
+
+  const reset = (text) => {
+    btn.textContent = text;
+    setTimeout(() => {
+      btn.textContent = pending ? '升级到 ' + pending.tag : '检查更新';
+      if (!pending) btn.disabled = false;
+    }, 2500);
+  };
+
+  /** silent=true：启动静默检查，命中后按设置自动安装或只标亮按钮 */
+  btn._check = async function ({ silent } = {}) {
+    try {
+      const r = await nativeBridge.postMessage({ action: 'appupdate', op: 'check' });
+      if (r && r.current && $('aboutVersion').textContent === '—') {
+        $('aboutVersion').textContent = 'v' + r.current + ' · Full/Lite 同步发布';
+      }
+      if (!r || !r.hasUpdate || !r.zipURL) {
+        if (!silent) reset('已是最新');
+        return null;
+      }
+      pending = r;
+      btn.textContent = '升级到 ' + r.tag;
+      btn.classList.add('ok');
+      btn.disabled = false;
+      if (settings.autoInstall) {
+        btn.disabled = true;
+        btn.textContent = '自动更新中，即将重启…';
+        await nativeBridge.postMessage({
+          action: 'appupdate', op: 'install', tag: r.tag, url: r.zipURL,
+        });
+      }
+      return r;
+    } catch (e) {
+      if (!silent) reset('检查失败');
+      return null;
+    }
+  };
+
   btn.addEventListener('click', async () => {
     if (pending) {
       btn.disabled = true;
@@ -215,28 +262,98 @@ function setupAppUpdate() {
     }
     btn.disabled = true;
     btn.textContent = '检查中…';
-    try {
-      const r = await nativeBridge.postMessage({ action: 'appupdate', op: 'check' });
-      if (r && r.hasUpdate && r.zipURL) {
-        pending = r;
-        btn.textContent = '升级到 ' + r.tag;
-        btn.classList.add('ok');
-        btn.disabled = false;
-      } else {
-        btn.textContent = '已是最新';
-        setTimeout(() => {
-          btn.textContent = '检查更新';
-          btn.disabled = false;
-        }, 2500);
-      }
-    } catch (e) {
-      btn.textContent = '检查失败';
-      setTimeout(() => {
-        btn.textContent = '检查更新';
-        btn.disabled = false;
-      }, 2500);
-    }
+    btn._check();
   });
+}
+
+/* ---------- 设置（localStorage 持久化） ---------- */
+
+const SET_KEY = 'kaitai-settings';
+const settings = Object.assign(
+  { theme: 'light', density: 'normal', resume: true, hwdec: true,
+    autoCheck: true, autoInstall: true },
+  JSON.parse(localStorage.getItem(SET_KEY) || '{}')
+);
+
+function saveSettings(patch) {
+  Object.assign(settings, patch);
+  try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch (e) {}
+  applySettings();
+}
+
+const sysDark = window.matchMedia('(prefers-color-scheme: dark)');
+function applySettings() {
+  const t = settings.theme === 'system'
+    ? (sysDark.matches ? 'dark' : 'light')
+    : settings.theme;
+  document.documentElement.dataset.theme = t;
+  document.body.classList.toggle('compact', settings.density === 'compact');
+  if (mpvOn) mpvCall('setopt', { key: 'hwdec', value: settings.hwdec ? 'videotoolbox' : 'no' });
+}
+sysDark.addEventListener('change', () => { if (settings.theme === 'system') applySettings(); });
+
+function bindSettingsUI() {
+  $('settingsBtn').addEventListener('click', () => { $('settingsScrim').hidden = false; });
+  $('settingsClose').addEventListener('click', () => { $('settingsScrim').hidden = true; });
+  $('settingsScrim').addEventListener('click', (e) => {
+    if (e.target === $('settingsScrim')) $('settingsScrim').hidden = true;
+  });
+
+  const seg = (id, key) => {
+    const box = $(id);
+    const sync = () => box.querySelectorAll('button').forEach((b) =>
+      b.classList.toggle('on', b.dataset.v === settings[key]));
+    box.addEventListener('click', (e) => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      saveSettings({ [key]: b.dataset.v });
+      sync();
+    });
+    sync();
+  };
+  seg('setTheme', 'theme');
+  seg('setDensity', 'density');
+
+  const sw = (id, key) => {
+    const el = $(id);
+    const sync = () => el.setAttribute('aria-checked', String(!!settings[key]));
+    el.addEventListener('click', () => {
+      saveSettings({ [key]: !settings[key] });
+      sync();
+    });
+    sync();
+  };
+  sw('setResume', 'resume');
+  sw('setHwdec', 'hwdec');
+  sw('setAutoCheck', 'autoCheck');
+  sw('setAutoInstall', 'autoInstall');
+
+  // 无内嵌内核时隐藏播放设置（网页版不涉及 mpv）
+  if (!hasEmbeddedPlayer) $('setPlaySection').hidden = true;
+}
+
+/* 恢复上次频道：记住 源 + 频道URL，启动后静默重放 */
+function rememberChannel() {
+  if (!state.current || !state.activeSource) return;
+  try {
+    localStorage.setItem('kaitai-last', JSON.stringify({
+      src: state.activeSource.id, url: state.current.url,
+    }));
+  } catch (e) {}
+}
+
+async function restoreLastChannel() {
+  if (!settings.resume) return false;
+  let last = null;
+  try { last = JSON.parse(localStorage.getItem('kaitai-last') || 'null'); } catch (e) {}
+  if (!last || !last.url) return false;
+  const src = state.sources.find((s) => s.id === last.src);
+  if (!src) return false;
+  await selectSource(src);
+  const ch = [...document.querySelectorAll('.ch')].find((e) => e.dataset.url === last.url);
+  if (!ch) return false;
+  ch.click();
+  return true;
 }
 
 /* 一键更新源：只有 app 内、且至少一个源带远程地址时才出现
@@ -533,6 +650,7 @@ function renderList() {
 
 function playChannel(ch) {
   state.current = ch;
+  rememberChannel();
   document.querySelectorAll('.ch').forEach((el) => {
     el.classList.toggle('on', el.dataset.url === ch.url);
   });
