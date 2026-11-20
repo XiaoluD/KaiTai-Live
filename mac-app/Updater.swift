@@ -105,27 +105,56 @@ enum AppUpdate {
     }
 
     /// 查最新版本；有更新返回 Info，无更新返回 nil
+    ///
+    /// 主路径不走 api.github.com（匿名 60 次/小时/IP，代理出口 IP 极易被打爆，
+    /// 2026-11-21 实测踩坑）：用 releases/latest 页面的 302 Location 拿 tag。
+    /// github.com 的页面重定向没有这个限流，直连和代理都通。
+    /// Location 拿不到（被墙改写/网络异常）时回退 API。
     static func check() async throws -> Info? {
-        let text = try await Updater.download(
-            "https://api.github.com/repos/\(repo)/releases/latest", limit: 1 << 20)
-        guard let data = text.data(using: .utf8),
-              let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let tag = obj["tag_name"] as? String else { return nil }
+        let tag: String
+        if let viaRedirect = try? await latestTagViaRedirect() {
+            tag = viaRedirect
+        } else {
+            let text = try await Updater.download(
+                "https://api.github.com/repos/\(repo)/releases/latest", limit: 1 << 20)
+            guard let data = text.data(using: .utf8),
+                  let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                  let t = obj["tag_name"] as? String else { return nil }
+            tag = t
+        }
 
         // 与本地同版本视为无更新（比较标准化后的三段数字）
         guard normalized(tag) != normalized(currentVersion) else { return nil }
 
-        guard let assets = obj["assets"] as? [[String: Any]] else {
+        // 资产名固定 ASCII（GitHub 上传中文资产名会丢前缀，v1.0.2 实测踩坑）
+        let zipURL = "https://github.com/\(repo)/releases/download/\(tag)/kaitai-\(variant)-arm64.zip"
+        return Info(tag: tag, zipURL: zipURL)
+    }
+
+    /// 请求 releases/latest 但不跟随重定向，从 Location 提取 /tag/vX.Y.Z
+    static func latestTagViaRedirect() async throws -> String {
+        guard let url = URL(string: "https://github.com/\(repo)/releases/latest") else {
             throw AppUpdateError.noMatchingAsset
         }
-        let suffix = "-\(variant)-arm64.zip"
-        for a in assets {
-            if let name = a["name"] as? String, name.hasSuffix(suffix),
-               let url = a["browser_download_url"] as? String {
-                return Info(tag: tag, zipURL: url)
-            }
+        var req = URLRequest(url: url, timeoutInterval: 15)
+        req.cachePolicy = .reloadIgnoringLocalCacheData
+        let config = URLSessionConfiguration.default
+        let delegate = NoRedirectDelegate()
+        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
+        defer { session.finishTasksAndInvalidate() }
+        let (_, resp) = try await session.data(for: req)
+        guard let http = resp as? HTTPURLResponse,
+              (300..<400).contains(http.statusCode),
+              let loc = http.value(forHTTPHeaderField: "Location"),
+              let range = loc.range(of: "/tag/") else {
+            throw AppUpdateError.noMatchingAsset
         }
-        throw AppUpdateError.noMatchingAsset
+        let tag = String(loc[range.upperBound...])
+        guard tag.hasPrefix("v"), tag.count <= 32,
+              tag.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" || $0 == "_" }) else {
+            throw AppUpdateError.noMatchingAsset
+        }
+        return tag
     }
 
     /// 下载并换包重启；返回后 App 会自行退出
@@ -181,5 +210,16 @@ enum AppUpdate {
         let parts = v.lowercased().hasPrefix("v")
             ? v.dropFirst() : v[...]
         return parts.split(separator: ".").map { $0.filter(\.isNumber) }.joined(separator: ".")
+    }
+}
+
+/// 禁止 URLSession 自动跟随重定向，把 302 的 Location 暴露出来
+final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
+    func urlSession(_ session: URLSession,
+                    task: URLSessionTask,
+                    willPerformHTTPRedirection response: HTTPURLResponse,
+                    newRequest request: URLRequest,
+                    completionHandler: @escaping (URLRequest?) -> Void) {
+        completionHandler(nil)
     }
 }
