@@ -20,6 +20,18 @@ let aggLoaded = false;
 
 const CATS = ['央视频道', '卫视频道', '港澳台', '其他'];
 
+/* 卫视热度榜：收视率与覆盖综合排序，榜内靠前；未上榜的走自然序兜底 */
+const HOT_SATV = ['湖南', '东方', '浙江', '江苏', '北京', '广东', '深圳', '山东',
+  '安徽', '天津', '湖北', '四川', '重庆', '东南', '辽宁', '黑龙江',
+  '贵州', '江西', '河南', '河北', '云南', '广西', '山西', '吉林',
+  '甘肃', '宁夏', '青海', '新疆', '内蒙古', '海南', '西藏', '兵团', '三沙'];
+
+function satvRank(name) {
+  const n = String(name || '');
+  const i = HOT_SATV.findIndex((k) => n.includes(k) && n.includes('卫视'));
+  return i === -1 ? 999 : i;
+}
+
 /* 频道视图的分类规则（按频道名判断，与源自带的 group-title 无关）。
  * 「电影频道」分类已按需求移除：CCTV-6 归入央视，电影/影院/CHC 等落入其他 */
 function classifyChannel(name) {
@@ -98,13 +110,19 @@ async function loadAllSources() {
     }
   }
 
-  // 排序：分类分块 → 央视里 CCTV 数字序在前 → 其余自然序（数字按数值比，CCTV-2 < CCTV-10）
+  // 排序：分类分块 → 央视里 CCTV 数字序在前 → 卫视按热度榜 → 其余自然序
   state.aggregated.sort((a, b) => {
     const ca = CATS.indexOf(a.cat), cb = CATS.indexOf(b.cat);
     if (ca !== cb) return ca - cb;
-    const pa = /^CCTV/i.test(a.name) ? 0 : 1;
-    const pb = /^CCTV/i.test(b.name) ? 0 : 1;
-    if (pa !== pb) return pa - pb;
+    if (a.cat === '央视频道') {
+      const pa = /^CCTV/i.test(a.name) ? 0 : 1;
+      const pb = /^CCTV/i.test(b.name) ? 0 : 1;
+      if (pa !== pb) return pa - pb;
+    }
+    if (a.cat === '卫视频道') {
+      const ra = satvRank(a.name), rb = satvRank(b.name);
+      if (ra !== rb) return ra - rb;
+    }
     return naturalCmp(a.name, b.name);
   });
   aggLoaded = true;
@@ -1337,6 +1355,9 @@ function toggleFullscreen() {
   if (document.fullscreenElement) document.exitFullscreen();
   else $('screen').requestFullscreen?.().catch(() => {});
 }
+
+// 全屏按钮：toggle（内嵌版走 mpv 原生全屏，网页版走 Fullscreen API）
+$('fullscreen').addEventListener('click', toggleFullscreen);
 
 document.addEventListener('keydown', (e) => {
   if (!settings.hotkeys) return;

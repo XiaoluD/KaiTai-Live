@@ -388,11 +388,20 @@ extension WKWebView {
 }
 
 // MARK: - 顶栏拖动条：WKWebView 吃掉所有鼠标事件，窗口拖不动；
-// 在顶部放一条透明视图，把鼠标按下转成窗口拖动（避开左侧红绿灯 80px）
+// 在顶部放一条透明视图，把鼠标按下转成窗口拖动（避开左侧红绿灯 80px）。
+// 双击 = 最大化 / 还原（系统标题栏的 zoom 行为）
 
 final class DragStripView: NSView {
+    private var lastClick = Date.distantPast
+
     override func mouseDown(with event: NSEvent) {
-        window?.performDrag(with: event)
+        let now = Date()
+        if now.timeIntervalSince(lastClick) < 0.35 {
+            window?.performZoom(nil)   // 双击：最大化 / 窗口化切换
+        } else {
+            window?.performDrag(with: event)
+        }
+        lastClick = now
     }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
 }
