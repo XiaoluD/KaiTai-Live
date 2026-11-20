@@ -131,25 +131,24 @@ enum AppUpdate {
         return Info(tag: tag, zipURL: zipURL)
     }
 
-    /// 请求 releases/latest 但不跟随重定向，从 Location 提取 /tag/vX.Y.Z
+    /// HEAD 请求 releases/latest，跟随重定向到最终 tag 页，从最终 URL 提取 /tag/vX.Y.Z。
+    /// 注意不能用「阻止重定向的 delegate」拿 302 Location：delegate 返回 nil 后
+    /// async data(for:) 会以 NSURLErrorCancelled 收尾（v1.0.4 实测踩坑），任务直接失败。
+    /// HEAD 跟随重定向 body 为空，最终 resp.url 即 /releases/tag/<tag>。
     static func latestTagViaRedirect() async throws -> String {
         guard let url = URL(string: "https://github.com/\(repo)/releases/latest") else {
             throw AppUpdateError.noMatchingAsset
         }
         var req = URLRequest(url: url, timeoutInterval: 15)
+        req.httpMethod = "HEAD"
         req.cachePolicy = .reloadIgnoringLocalCacheData
-        let config = URLSessionConfiguration.default
-        let delegate = NoRedirectDelegate()
-        let session = URLSession(configuration: config, delegate: delegate, delegateQueue: nil)
-        defer { session.finishTasksAndInvalidate() }
-        let (_, resp) = try await session.data(for: req)
-        guard let http = resp as? HTTPURLResponse,
-              (300..<400).contains(http.statusCode),
-              let loc = http.value(forHTTPHeaderField: "Location"),
-              let range = loc.range(of: "/tag/") else {
+        let (_, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse, http.statusCode == 200,
+              let finalURL = resp.url?.absoluteString,
+              let range = finalURL.range(of: "/tag/") else {
             throw AppUpdateError.noMatchingAsset
         }
-        let tag = String(loc[range.upperBound...])
+        let tag = String(finalURL[range.upperBound...])
         guard tag.hasPrefix("v"), tag.count <= 32,
               tag.allSatisfy({ $0.isLetter || $0.isNumber || $0 == "." || $0 == "-" || $0 == "_" }) else {
             throw AppUpdateError.noMatchingAsset
@@ -210,16 +209,5 @@ enum AppUpdate {
         let parts = v.lowercased().hasPrefix("v")
             ? v.dropFirst() : v[...]
         return parts.split(separator: ".").map { $0.filter(\.isNumber) }.joined(separator: ".")
-    }
-}
-
-/// 禁止 URLSession 自动跟随重定向，把 302 的 Location 暴露出来
-final class NoRedirectDelegate: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession,
-                    task: URLSessionTask,
-                    willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest,
-                    completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(nil)
     }
 }

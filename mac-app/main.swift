@@ -191,38 +191,50 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
     func userContentController(_ ucc: WKUserContentController,
                                didReceive message: WKScriptMessage,
                                replyHandler: @escaping (Any?, String?) -> Void) {
+        // reply 统一异步投递：在 didPostMessage 调用栈内同步调 replyHandler，
+        // WebKit 偶发不把 reply 传回 JS（Promise 永挂，v1.0.2 起反复踩坑）。
+        // 先退出本调用栈再回调，实测恢复可靠。
+        let reply: (Any?, String?) -> Void = { payload, err in
+            DispatchQueue.main.async { replyHandler(payload, err) }
+        }
         guard let body = message.body as? [String: Any],
               let action = body["action"] as? String else {
-            replyHandler(nil, "bad request")
+            NSLog("[IPTV] bridge: bad request")
+            reply(nil, "bad request")
             return
         }
+        NSLog("[IPTV] bridge msg: %@", action)
 
         switch action {
         case "probe":
             // 返回可用的外部播放器列表，前端据此决定按钮文案
-            var payload: [String: Any] = ["players": PlayerBridge.installed().map { $0.name }]
+            NSLog("[IPTV] probe: querying players")
+            let playerNames = PlayerBridge.installed().map { $0.name }
+            NSLog("[IPTV] probe: players=[%@] embedded=%d", playerNames.joined(separator: ","), embeddedAvailable ? 1 : 0)
+            var payload: [String: Any] = ["players": playerNames]
             if embeddedAvailable { payload["embedded"] = true }
             payload["version"] = AppUpdate.currentVersion
-            replyHandler(payload, nil)
+            reply(payload, nil)
+            NSLog("[IPTV] probe: replied")
 
         case "mpv":
             handleMpv(body, replyHandler)
 
         case "open":
             guard let raw = body["url"] as? String else {
-                replyHandler(nil, "missing url")
+                reply(nil, "missing url")
                 return
             }
             if let used = PlayerBridge.open(raw) {
                 NSLog("[IPTV] 已交给外部播放器: %@ ← %@", used, raw)
-                replyHandler(["player": used], nil)
+                reply(["player": used], nil)
             } else {
-                replyHandler(["player": NSNull()], nil)
+                reply(["player": NSNull()], nil)
             }
 
         case "download":
             guard let urls = body["urls"] as? [String], !urls.isEmpty else {
-                replyHandler(["texts": [:]], nil)
+                reply(["texts": [:]], nil)
                 return
             }
             Task {
@@ -236,21 +248,21 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
                     }
                 }
                 NSLog("[IPTV] 下载列表 %d 成功 / %d 失败", texts.count, errors.count)
-                await MainActor.run { replyHandler(["texts": texts, "errors": errors], nil) }
+                await MainActor.run { reply(["texts": texts, "errors": errors], nil) }
             }
 
         case "save":
             guard let file = body["file"] as? String,
                   let content = body["content"] as? String else {
-                replyHandler(nil, "missing file/content")
+                reply(nil, "missing file/content")
                 return
             }
             do {
                 let path = try Updater.save(file: file, content: content, playlistsDir: playlistsDir())
                 NSLog("[IPTV] 已写入 %@", path)
-                replyHandler(["path": path], nil)
+                reply(["path": path], nil)
             } catch {
-                replyHandler(nil, error.localizedDescription)
+                reply(nil, error.localizedDescription)
             }
 
         case "appupdate":
@@ -260,37 +272,40 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
                 Task {
                     do {
                         if let info = try await AppUpdate.check() {
+                            NSLog("[IPTV] update check: hasUpdate=%@ zip=%@", info.tag, info.zipURL)
                             await MainActor.run {
-                                replyHandler(["hasUpdate": true, "tag": info.tag,
+                                reply(["hasUpdate": true, "tag": info.tag,
                                               "zipURL": info.zipURL,
                                               "current": AppUpdate.currentVersion], nil)
                             }
                         } else {
+                            NSLog("[IPTV] update check: no update (local=%@)", AppUpdate.currentVersion)
                             await MainActor.run {
-                                replyHandler(["hasUpdate": false,
+                                reply(["hasUpdate": false,
                                               "current": AppUpdate.currentVersion], nil)
                             }
                         }
                     } catch {
-                        await MainActor.run { replyHandler(nil, error.localizedDescription) }
+                        NSLog("[IPTV] update check error: %@", error.localizedDescription)
+                        await MainActor.run { reply(nil, error.localizedDescription) }
                     }
                 }
             case "install":
                 guard let tag = body["tag"] as? String,
                       let url = body["url"] as? String else {
-                    replyHandler(nil, "missing tag/url")
+                    reply(nil, "missing tag/url")
                     return
                 }
-                replyHandler(["started": true], nil)
+                reply(["started": true], nil)
                 Task {
                     try? await AppUpdate.install(AppUpdate.Info(tag: tag, zipURL: url))
                 }
             default:
-                replyHandler(nil, "unknown appupdate op")
+                reply(nil, "unknown appupdate op")
             }
 
         default:
-            replyHandler(nil, "unknown action")
+            reply(nil, "unknown action")
         }
     }
 
@@ -467,10 +482,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
         // 注入当前版本号：设置-关于的「版本详情」启动即显示，不用等检查更新
         let ver = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
-        let verScript = WKUserScript(
-            source: "window.__appVersion = '\(ver)';",
-            injectionTime: .atDocumentStart, forMainFrameOnly: true)
-        config.userContentController.addUserScript(verScript)
+        if ProcessInfo.processInfo.environment["KAITAI_NO_USERSCRIPT"] == nil {
+            let verScript = WKUserScript(
+                source: "window.__appVersion = '\(ver)';",
+                injectionTime: .atDocumentStart, forMainFrameOnly: true)
+            config.userContentController.addUserScript(verScript)
+        }
 
         let wv = WKWebView(frame: NSRect(x: 0, y: 0, width: 1280, height: 840), configuration: config)
         wv.autoresizingMask = [.width, .height]
@@ -538,6 +555,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         self.window = win
         self.webView = wv
+
+        // 诊断：定时轮询网页里的 window.__diag，观察 JS 侧桥挂点
+        if ProcessInfo.processInfo.environment["IPTV_DIAG"] != nil {
+            for delay in [5.0, 12.0, 25.0] {
+                DispatchQueue.main.asyncAfter(deadline: .now() + delay) {
+                    self.webView?.evaluateJavaScript("String(window.__diag || '(undefined)')") { r, e in
+                        NSLog("[IPTV] diag@%ds: %@ err=%@", Int(delay), r as? String ?? "nil", e?.localizedDescription ?? "-")
+                    }
+                }
+            }
+        }
 
         // 自检：设置 IPTV_SELFTEST=1 时 8 秒后自动关窗，
         // 用于验证「关窗 → 进程退出 → 端口释放」这条链路。

@@ -177,11 +177,14 @@ let externalPlayers = [];
 let hasEmbeddedPlayer = false;
 
 async function probeNative() {
-  if (!nativeBridge) return { players: [], embedded: false };
+  if (!nativeBridge) { window.__diag = 'no-bridge'; return { players: [], embedded: false }; }
   try {
+    window.__diag = 'probe-sent';
     const r = await nativeBridge.postMessage({ action: 'probe' });
+    window.__diag = 'probe-replied:' + JSON.stringify(r).slice(0, 100);
     return { players: (r && r.players) || [], embedded: !!(r && r.embedded) };
   } catch (e) {
+    window.__diag = 'probe-error:' + e;
     return { players: [], embedded: false };
   }
 }
