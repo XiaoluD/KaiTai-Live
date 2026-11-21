@@ -711,23 +711,60 @@ body.ios .volwrap { display: none; }
 .scrim.show { opacity: 1; }
 
 @media (max-width: 640px) {
-  .rail-toggle { display: grid; }
-  .layout { height: calc(100% - 52px - env(safe-area-inset-top)); }
-  .rail {
-    position: fixed;
-    top: calc(52px + env(safe-area-inset-top));
-    bottom: 0;
-    left: 0;
-    z-index: 21;
-    width: min(300px, 84vw);
-    flex: none;
-    transform: translateX(-102%);
-    transition: transform .25s ease-out;
-    padding-top: 14px;
-    box-shadow: 12px 0 40px rgba(0,0,0,.35);
+  /* iPhone 竖屏：上播放器 + 下频道列表（央视频/B站式布局），不藏抽屉 */
+  .rail-toggle { display: none; }
+  /* 顶栏无内容：只留状态栏安全区，把空间还给画面 */
+  .topbar {
+    height: env(safe-area-inset-top);
+    padding: 0;
+    border-bottom: none;
+    background: var(--bg);
   }
-  body.rail-open .rail { transform: translateX(0); }
-  .stage { padding: 12px 14px 10px; }
+  .layout {
+    flex-direction: column;
+    height: calc(100% - env(safe-area-inset-top));
+  }
+  .stage {
+    order: 1;
+    flex: 0 0 auto;
+    padding: 10px 12px 8px;
+  }
+  /* 播放器固定 16:9，不再撑满整屏 */
+  .screen {
+    flex: none;
+    aspect-ratio: 16 / 9;
+    width: 100%;
+    border-radius: 10px;
+  }
   .now { font-size: 15px; }
-  .screen { border-radius: 10px; }
+  .nowbar { padding: 10px 0; }
+
+  /* 侧边栏内容直接铺到播放器下方：搜索/源/分类/列表纵向可滚 */
+  .rail {
+    order: 2;
+    width: 100%;
+    flex: 1 1 auto;
+    min-height: 0;
+    border-right: none;
+    border-top: 1px solid var(--line);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 12px 12px 12px;
+  }
+  /* 分组改横滑 chips（省空间 + iOS 习惯） */
+  .groups {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding: 0 4px 10px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .groups .gitem {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+  /* 频道列表吃掉剩余高度（rail 本身已可滚，列表自然延展） */
+  .chans { flex: 0 0 auto; overflow: visible; }
 }
