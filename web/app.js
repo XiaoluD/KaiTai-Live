@@ -75,6 +75,9 @@ async function loadAllSources() {
   $('count').textContent = '聚合所有源…';
   const results = await Promise.all(state.sources.map(async (s) => {
     try {
+      // 网页/PWA 的「更新源」结果存本地：优先用本机最新实测列表，覆盖服务器文件
+      const override = readPlaylistOverrides()[s.id];
+      if (override) return { src: s, channels: parseM3U(override) };
       const res = await fetch('./' + s.file, { cache: 'no-store' });
       if (!res.ok) return { src: s, channels: [] };
       return { src: s, channels: parseM3U(await res.text()) };
@@ -681,27 +684,31 @@ async function restoreLastChannel() {
  * 且 video 反映的是真实解码能力，比 HTTP 探活准（FLV 能返回 200 但播不了）。
  */
 function setupUpdateButton() {
-  const btn = $('update');
   const st = $('updStatus');
   const remote = state.sources.filter((s) => s.url && !s.local);
-  if (!nativeBridge || !remote.length) {
-    btn.hidden = true;
-    return;
-  }
-  btn.hidden = false;
 
-  btn.addEventListener('click', async () => {
-    btn.disabled = true;
+  const run = async (ev) => {
+    const btnEl = ev && ev.currentTarget;
+    if (btnEl) btnEl.disabled = true;
+    if (!remote.length) { st.textContent = '没有可更新的远程源'; if (btnEl) btnEl.disabled = false; return; }
     const started = Date.now();
     try {
-      await runUpdate(remote, st);
+      await (nativeBridge ? runUpdate(remote, st) : runUpdateWeb(remote, st));
       st.textContent += ' · 用时 ' + Math.round((Date.now() - started) / 1000) + ' 秒';
       if (state.activeSource) selectSource(state.activeSource);
+      else if (settings.view === 'channels') { aggLoaded = false; loadAllSources().then(() => { renderGroups(); renderList(); }); }
     } catch (e) {
       st.textContent = '更新失败：' + ((e && e.message) || e);
     }
-    btn.disabled = false;
-  });
+    if (btnEl) btnEl.disabled = false;
+  };
+
+  // macOS App：设置面板触发用的隐藏按钮（原生桥 download/save 链路）
+  const btn = $('update');
+  if (nativeBridge && remote.length) btn.addEventListener('click', run);
+
+  // 三端可见按钮（侧边栏底部，齿轮旁）：App 走原生桥，网页/PWA 走前端管线
+  $('updSourcesBtn').addEventListener('click', run);
 }
 
 async function runUpdate(remote, st) {
@@ -733,6 +740,53 @@ async function runUpdate(remote, st) {
 
     const m3u = buildM3U(kept, src.name);
     await nativeBridge.postMessage({ action: 'save', file: src.file, content: m3u });
+    parts.push(src.name + ' ' + channels.length + ' → ' + kept.length + ' 条');
+  }
+  st.textContent = parts.join('｜');
+}
+
+/* ---------- 网页/PWA 的更新源：无原生桥，fetch + <video> 实测 + 存 localStorage ---------- */
+/* 保存的列表按设备隔离（本机浏览器专用），加载时覆盖服务器上的 playlists 文件 */
+
+const PLAYLIST_OVERRIDES_KEY = 'kaitai-playlist-overrides';
+
+function readPlaylistOverrides() {
+  try { return JSON.parse(localStorage.getItem(PLAYLIST_OVERRIDES_KEY) || '{}'); }
+  catch (e) { return {}; }
+}
+
+async function runUpdateWeb(remote, st) {
+  const overrides = readPlaylistOverrides();
+  const parts = [];
+  for (const src of remote) {
+    st.textContent = '下载 ' + src.name + '…';
+    let raw = '';
+    try {
+      const res = await fetch(src.url, { cache: 'no-store' });
+      raw = res.ok ? await res.text() : '';
+      if (!raw) parts.push(src.name + ' 失败：HTTP ' + res.status);
+    } catch (e) {
+      parts.push(src.name + ' 失败：下载被拒（跨域/网络）');
+    }
+    if (!raw) continue;
+
+    const channels = parseM3U(raw);
+    if (!channels.length) {
+      parts.push(src.name + ' 失败：解析不出频道');
+      continue;
+    }
+
+    const kept = await probeChannels(channels, (done, total) => {
+      st.textContent =
+        '正在实测 ' + src.name + '：' + done + '/' + total + '（点开就能播的才留下）';
+    });
+
+    overrides[src.id] = buildM3U(kept, src.name);
+    try {
+      localStorage.setItem(PLAYLIST_OVERRIDES_KEY, JSON.stringify(overrides));
+    } catch (e) {
+      throw new Error('本地存储空间不足，无法保存更新结果');
+    }
     parts.push(src.name + ' ' + channels.length + ' → ' + kept.length + ' 条');
   }
   st.textContent = parts.join('｜');
