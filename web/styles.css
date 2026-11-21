@@ -390,6 +390,8 @@ body.fs-mode .stage { position: relative; }
 .ctl:hover { border-color: var(--accent); color: var(--accent); }
 .ctl:active { transform: scale(.97); }
 .ctl:disabled { opacity: .4; cursor: not-allowed; }
+/* hidden 属性会被上面的 display 覆盖，显式兜底（网页版不该显示「用 IINA 打开」） */
+.ctl[hidden] { display: none; }
 .ctl.primary {
   background: linear-gradient(135deg, var(--accent-from), var(--accent-to));
   border: none; color: #fff;
@@ -653,4 +655,79 @@ html[data-theme='dark'] .settings { background: var(--surface); border: 1px soli
 @media (max-width: 960px) {
   .rail { width: 224px; flex-basis: 224px; }
   .settings { width: min(520px, 92vw); }
+}
+
+/* ============================================================
+   iOS / iPadOS（PWA）适配
+   ============================================================ */
+
+/* 触屏：禁双击缩放，hover 改为 active */
+body.touch * { -webkit-tap-highlight-color: transparent; }
+body.touch button,
+body.touch input[type="search"],
+body.touch .chan { touch-action: manipulation; }
+body.touch .iconbtn:hover { background: transparent; color: inherit; }
+body.touch .iconbtn:active { background: var(--surface-2); color: var(--ink); }
+body.touch .sources .src:active { background: var(--surface-2); }
+body.touch .chan:active { background: var(--surface-2); }
+body.touch .ss-btn:active,
+body.touch .ctl:active,
+body.touch .btn:active { transform: scale(.96); }
+
+/* 触屏目标 ≥44px（Apple HIG） */
+body.touch .iconbtn { width: 40px; height: 40px; }
+body.touch .sources .src { padding: 12px; font-size: 14px; }
+body.touch .chan { min-height: 48px; }
+body.touch .ctl { height: 36px; }
+body.touch .rail-toggle { width: 40px; height: 40px; margin-left: 4px; }
+
+/* safe-area：刘海/灵动岛与底部横条（standalone 模式内容延伸到系统区域） */
+.topbar {
+  padding-left: 12px;
+  padding-top: env(safe-area-inset-top);
+  height: calc(52px + env(safe-area-inset-top));
+  box-sizing: content-box;
+}
+.layout { height: calc(100% - 52px - env(safe-area-inset-top)); }
+.rail-foot,
+body.fs-mode .nowbar { padding-bottom: calc(12px + env(safe-area-inset-bottom)); }
+
+/* macOS App 保留红绿灯避让（body 上由 JS 加 .mac） */
+body.mac .topbar { padding-left: 84px; padding-top: 0; height: 52px; }
+body.mac .layout { height: calc(100% - 52px); }
+
+/* iOS 不允许 JS 控音量：音量滑条隐藏（走系统音量） */
+body.ios .volwrap { display: none; }
+
+/* ---------- iPhone 窄屏：侧边栏变抽屉 ---------- */
+.rail-toggle { display: none; }
+.scrim {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 20;
+  opacity: 0;
+  transition: opacity .22s;
+}
+.scrim.show { opacity: 1; }
+
+@media (max-width: 640px) {
+  .rail-toggle { display: grid; }
+  .layout { height: calc(100% - 52px - env(safe-area-inset-top)); }
+  .rail {
+    position: fixed;
+    top: calc(52px + env(safe-area-inset-top));
+    bottom: 0;
+    left: 0;
+    z-index: 21;
+    width: min(300px, 84vw);
+    flex: none;
+    transform: translateX(-102%);
+    transition: transform .25s ease-out;
+    padding-top: 14px;
+    box-shadow: 12px 0 40px rgba(0,0,0,.35);
+  }
+  body.rail-open .rail { transform: translateX(0); }
+  .stage { padding: 12px 14px 10px; }
+  .now { font-size: 15px; }
+  .screen { border-radius: 10px; }
 }

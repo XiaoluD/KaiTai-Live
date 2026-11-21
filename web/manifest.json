@@ -1,0 +1,16 @@
+{
+  "name": "开台 · IPTV",
+  "short_name": "开台",
+  "description": "内置播放内核的 IPTV 直播：多源聚合、分类导航",
+  "lang": "zh-CN",
+  "start_url": "./index.html?view=channels",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#101216",
+  "theme_color": "#101216",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

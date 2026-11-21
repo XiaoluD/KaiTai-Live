@@ -176,6 +176,16 @@ let externalPlayers = [];
 // 不需要装任何第三方播放器也能播 FLV / 组播。
 let hasEmbeddedPlayer = false;
 
+/* ---------- 平台检测：iOS / iPadOS PWA 与 macOS App 的差异化处理 ---------- */
+const IS_TOUCH = ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+// iPadOS 13+ UA 伪装成 Mac（'Macintosh' + 多点触摸）——用触摸点数识别
+const IS_IOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+  || (navigator.maxTouchPoints > 1 && /Macintosh/i.test(navigator.userAgent));
+const IS_MAC = /Macintosh/i.test(navigator.userAgent) && navigator.maxTouchPoints === 0;
+if (IS_MAC) document.body.classList.add('mac');
+if (IS_TOUCH) document.body.classList.add('touch');
+if (IS_IOS) document.body.classList.add('ios');
+
 async function probeNative() {
   if (!nativeBridge) { window.__diag = 'no-bridge'; return { players: [], embedded: false }; }
   try {
@@ -379,6 +389,51 @@ function enablePause(on) {
   setPauseUI(mpvPaused);
 }
 
+/* ---------- iPhone/iPad（PWA）：抽屉与锁屏控制 ---------- */
+
+function openRail() {
+  document.body.classList.add('rail-open');
+  const s = $('railScrim');
+  s.hidden = false;
+  requestAnimationFrame(() => s.classList.add('show'));
+}
+
+function closeRail() {
+  document.body.classList.remove('rail-open');
+  const s = $('railScrim');
+  s.classList.remove('show');
+  setTimeout(() => { if (!document.body.classList.contains('rail-open')) s.hidden = true; }, 260);
+}
+
+function isNarrow() { return window.matchMedia('(max-width: 640px)').matches; }
+
+function closeRailOnNarrow() { if (isNarrow()) closeRail(); }
+
+function setupMobileUI() {
+  if (!IS_TOUCH) return;
+  $('railToggle').addEventListener('click', () => {
+    document.body.classList.contains('rail-open') ? closeRail() : openRail();
+  });
+  $('railScrim').addEventListener('click', closeRail);
+  // 旋转/调窗口时从窄屏转宽屏，抽屉态复位
+  window.addEventListener('resize', () => { if (!isNarrow()) closeRail(); });
+}
+
+/* iOS 锁屏/灵动岛：显示正在播的频道，提供播放/暂停控制 */
+function updateNowPlaying(ch) {
+  if (!IS_IOS || !('mediaSession' in navigator)) return;
+  try {
+    const logo = premiumLogo(ch.name);
+    navigator.mediaSession.metadata = new window.MediaMetadata({
+      title: stripQual(ch.name),
+      artist: ch.group || 'IPTV 直播',
+      artwork: logo ? [{ src: logo, sizes: '512x512', type: 'image/png' }] : [],
+    });
+    navigator.mediaSession.setActionHandler('play', () => { $('pause').click(); });
+    navigator.mediaSession.setActionHandler('pause', () => { $('pause').click(); });
+  } catch (e) { /* MediaSession 失败不影响播放 */ }
+}
+
 /* ---------- 启动 ---------- */
 
 async function boot() {
@@ -397,6 +452,7 @@ async function boot() {
   }
 
   renderSourceButtons();
+  setupMobileUI();
   // 先探一次原生能力，后面的播放分支要靠 hasEmbeddedPlayer
   await setupExternalButton();
   setupUpdateButton();
@@ -1055,6 +1111,8 @@ function playChannel(ch, src) {
 
   $('now').textContent = stripQual(ch.name) + (ch.group ? ' · ' + ch.group : '');
   renderSrcSwitch();
+  updateNowPlaying(ch);       // iPhone/iPad 锁屏与灵动岛显示正在播的频道
+  closeRailOnNarrow();        // 手机窄屏：选完频道自动收起抽屉
   const pb = $('player');
   if (pb && !pb.hidden) pb.disabled = false;
   setOverlay('正在连接…', ch.url, false);
@@ -1366,6 +1424,10 @@ function enterFsMode() {
   fsWake();
   if (mpvOn) {
     mpvCall('fullscreen');   // 系统全屏 + UI 隐藏后 #screen 铺满窗口 → 画面真全屏
+  } else if (IS_IOS && $('video').webkitEnterFullscreen) {
+    // iOS Safari/PWA 只支持 video 元素的原生全屏（自带旋转与系统控制条）
+    $('video').webkitEnterFullscreen();
+    document.body.classList.remove('fs-mode', 'fs-idle');
   } else {
     $('screen').requestFullscreen?.().catch(() => {});
   }
@@ -1376,6 +1438,8 @@ function exitFsMode() {
   clearTimeout(fsIdleTimer);
   if (mpvOn) {
     mpvCall('fullscreen');
+  } else if (IS_IOS && $('video').webkitExitFullscreen) {
+    $('video').webkitExitFullscreen();
   } else if (document.fullscreenElement) {
     document.exitFullscreen();
   }
