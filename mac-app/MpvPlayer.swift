@@ -63,6 +63,7 @@ final class MpvPlayerView: NSView {
         // 和网页里 .screen 的圆角对齐，否则四角会露出直角
         layer?.cornerRadius = 12
         layer?.masksToBounds = true
+        addSubview(logoView)
         setupMPV()
     }
 
@@ -261,6 +262,55 @@ final class MpvPlayerView: NSView {
         mpv_set_property_string(h, "pause", paused ? "yes" : "no")
     }
 
+    // MARK: 频道台标（画面右上角，IPTV 标配）
+
+    private let logoView: NSImageView = {
+        let v = NSImageView()
+        v.translatesAutoresizingMaskIntoConstraints = false
+        v.alphaValue = 0.85
+        v.isHidden = true
+        return v
+    }()
+    private var logoURL: URL?
+
+    /// 播放时显示当前频道台标；url 为空或下载失败时隐藏
+    func setLogo(_ urlString: String?) {
+        guard let s = urlString?.trimmingCharacters(in: .whitespaces), !s.isEmpty,
+              let url = URL(string: s) else {
+            DispatchQueue.main.async { [logoView] in logoView.isHidden = true }
+            logoURL = nil
+            return
+        }
+        if logoURL == url { return }   // 同一台重复播放不打扰
+        logoURL = url
+        DispatchQueue.main.async { [logoView] in logoView.isHidden = true }
+        URLSession.shared.dataTask(with: url) { data, resp, _ in
+            guard let data, data.count > 64,
+                  (resp as? HTTPURLResponse)?.statusCode == 200,
+                  let img = NSImage(data: data) else { return }
+            DispatchQueue.main.async {
+                guard self.logoURL == url else { return }   // 已换台，丢弃旧图
+                self.logoView.image = img
+                self.layoutLogo()
+                self.logoView.isHidden = false
+            }
+        }.resume()
+    }
+
+    /// 台标贴右上角，宽度约画面 14%，高度等比
+    private func layoutLogo() {
+        guard let img = logoView.image else { return }
+        let maxW = bounds.width * 0.14
+        let maxH = bounds.height * 0.14
+        let ratio = img.size.width > 0 ? img.size.height / img.size.width : 0.5
+        var w = maxW
+        var h = w * ratio
+        if h > maxH { h = maxH; w = h / ratio }
+        logoView.frame = NSRect(x: bounds.width - w - bounds.width * 0.02,
+                                y: bounds.height - h - bounds.height * 0.03,
+                                width: w, height: h)
+    }
+
     /// 运行时改 mpv 属性（设置面板的硬解开关走这里）
     func setOption(_ key: String, _ value: String) {
         guard let h = mpv else { return }
@@ -305,6 +355,7 @@ final class MpvPlayerView: NSView {
     /// 视口尺寸变化（窗口拉伸、网页布局变动）时重渲一帧
     override func setFrameSize(_ newSize: NSSize) {
         super.setFrameSize(newSize)
+        if !logoView.isHidden { layoutLogo() }
         requestRender()
     }
 

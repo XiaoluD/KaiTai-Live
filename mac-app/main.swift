@@ -371,6 +371,12 @@ final class JSBridge: NSObject, WKScriptMessageHandlerWithReply {
             DispatchQueue.main.async { view.window?.toggleFullScreen(nil) }
             reply(["ok": true], nil)
 
+        case "logo":
+            // 播放画面右上角的频道台标（网页层看不到，得贴在 mpv 视图上）
+            let url = body["url"] as? String
+            DispatchQueue.main.async { view.setLogo(url) }
+            reply(["ok": true], nil)
+
         case "setopt":
             let key = body["key"] as? String ?? ""
             let value = body["value"] as? String ?? ""

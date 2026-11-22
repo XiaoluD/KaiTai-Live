@@ -268,6 +268,20 @@ html[data-theme='dark'] .groups .gitem:hover { background: var(--surface-2); }
 .screen .overlay { position: absolute; inset: 0; }
 .screen video { width: 100%; height: 100%; object-fit: contain; background: #000; }
 
+/* 播放画面右上角的频道台标 */
+.chan-logo {
+  position: absolute;
+  top: 4%;
+  right: 2%;
+  max-width: 14%;
+  max-height: 14%;
+  object-fit: contain;
+  opacity: .85;
+  filter: drop-shadow(0 1px 6px rgba(0,0,0,.55));
+  z-index: 3;
+  pointer-events: none;
+}
+
 /* ---------- 播放器全屏模式：画面铺满整个屏幕，UI 淡出 ---------- */
 body.fs-mode .topbar,
 body.fs-mode aside { display: none; }
