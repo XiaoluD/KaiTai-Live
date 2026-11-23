@@ -1,0 +1,54 @@
+name: Build Windows App
+
+on:
+  push:
+    tags: ['windows-v*']
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download libmpv (shinchiro dev build)
+        shell: pwsh
+        run: |
+          $rel = Invoke-RestMethod "https://api.github.com/repos/shinchiro/mpv-winbuild-cmake/releases/latest"
+          $asset = $rel.assets | Where-Object { $_.name -like "mpv-dev-x86_64-*.7z" } | Select-Object -First 1
+          if (-not $asset) { throw "未找到 mpv-dev asset" }
+          Invoke-WebRequest $asset.browser_download_url -OutFile mpv-dev.7z
+          7z x mpv-dev.7z -o"mpv-dev" -y | Out-Null
+          Get-ChildItem -Recurse mpv-dev | Where-Object { $_.Name -eq "libmpv-2.dll" } | Select-Object -First 1 | ForEach-Object { Copy-Item $_.FullName libmpv-2.dll }
+          if (-not (Test-Path libmpv-2.dll)) { throw "libmpv-2.dll 未解出" }
+
+      - name: Build
+        run: dotnet publish windows-app/KaiTai/KaiTai.csproj -c Release -o publish
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          Copy-Item libmpv-2.dll publish/
+          # 随包带 web 界面与清单（与 mac-app 同构）
+          Copy-Item web publish/web -Recurse -Force
+          Remove-Item publish/web/hls.min.js.map -ErrorAction SilentlyContinue
+          Compress-Archive -Path publish/* -DestinationPath kaitai-windows-x64.zip
+          Get-Item kaitai-windows-x64.zip | Select-Object Name, Length
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: kaitai-windows-x64.zip
+          body: |
+            开台 Windows 版（自带 libmpv 内核）
+
+            **安装**：解压到任意目录 → 运行 KaiTai.exe（需 Windows 10/11 x64）
+            **注意**：解压路径建议避开 C:\Program Files（本地服务需写 playlists）
+          tag_name: windows-1.0.0
+          overwrite_files: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

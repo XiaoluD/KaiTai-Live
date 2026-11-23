@@ -181,11 +181,42 @@ function pickDefaultItem(agg) {
   return agg.items[0];
 }
 
-/* ---------- 外部播放器（只有 macOS app 里有这个原生桥） ---------- */
+/* ---------- 外部播放器（macOS app 有原生桥；Windows app 走 WebView2 桥） ---------- */
+
+// Windows 版（WebView2）桥：postMessage 无返回值，用 __winId + message 事件实现 promise
+const WIN_BRIDGE = window.chrome && window.chrome.webview && window.chrome.webview.postMessage
+  ? window.chrome.webview : null;
+let winBridgeSeq = 0;
+const winBridgePending = new Map();
+
+function winPost(msg) {
+  return new Promise((resolve) => {
+    if (!WIN_BRIDGE) return resolve(null);
+    const id = ++winBridgeSeq;
+    winBridgePending.set(id, resolve);
+    WIN_BRIDGE.postMessage(Object.assign({}, msg, { __winId: id }));
+    // 15 秒兜底超时，防止原生侧漏回
+    setTimeout(() => {
+      if (winBridgePending.has(id)) { winBridgePending.delete(id); resolve(null); }
+    }, 15000);
+  });
+}
+
+if (WIN_BRIDGE) {
+  WIN_BRIDGE.addEventListener('message', (e) => {
+    const d = e.data || {};
+    if (d.__winId && winBridgePending.has(d.__winId)) {
+      const resolve = winBridgePending.get(d.__winId);
+      winBridgePending.delete(d.__winId);
+      resolve(d.result);
+    }
+  });
+}
 
 // 浏览器版本（部署在 ECS 上访问）没有这个桥，按钮自动隐藏
 const nativeBridge =
-  (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iptv) || null;
+  (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.iptv) ||
+  (WIN_BRIDGE ? { postMessage: winPost } : null);
 
 let externalPlayers = [];
 // 内嵌版（VARIANT=embedded）原生桥会回 embedded:true，表示本机自带 libmpv 内核，
