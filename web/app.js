@@ -1338,6 +1338,17 @@ function urlHint(url) {
 function failPlayback(detail) {
   clearTimeout(state.timer);
   const hint = state.current ? urlHint(state.current.url) : '';
+  // https 页面下浏览器拦截明文流（mixed content）：清单里 1141 条 http 源会被整体拦截，
+  // 给出可操作的切换指引而不是让用户对着「域名可能已失效」发懵
+  if (location.protocol === 'https:' && state.current && /^http:\/\//i.test(state.current.url)) {
+    setOverlay(
+      'https 页面播不了明文源',
+      '这个频道是 http:// 开头的流，浏览器会拦截 https 页面里的明文媒体（mixed content）。' +
+      '用 http://iptv.wusi321.top 访问即可播放全部频道（http 入口已开放，收藏这条地址即可）。',
+      true
+    );
+    return;
+  }
   const body = [hint, detail || '未知原因'].filter(Boolean).join(' ');
   const tail = externalPlayers.length
     ? '点上方「用 ' + externalPlayers[0] + ' 打开」交给原生播放器，或复制直链用别的播放器。'
