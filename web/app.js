@@ -481,8 +481,11 @@ function showAuthGate() {
   gate.hidden = false;
   const input = $('authInput');
   const err = $('authErr');
+  let entering = false;   // 防连点/回车+点击双触发导致 initApp 重复执行
   const tryAuth = () => {
+    if (entering) return;
     if (btoa(normalizeDigits(input.value)) === AUTH_PASS_B64) {
+      entering = true;
       saveAuthMark();
       gate.hidden = true;   // 软进入：不整页 reload——存储被禁时 reload 会死循环回密码框
       initApp();
@@ -511,7 +514,10 @@ function boot() {
   initApp();
 }
 
+let appInited = false;   // 幂等锁：日志实锤连点「进入」会重复跑 initApp（sources.json 3 秒 7 次），界面卡死
 async function initApp() {
+  if (appInited) return;
+  appInited = true;
   try {
     const res = await fetch('./sources.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('sources.json ' + res.status);
