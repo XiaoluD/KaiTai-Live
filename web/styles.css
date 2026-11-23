@@ -825,6 +825,8 @@ body.ios .volwrap { display: none; }
   background: var(--bg);
   padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
 }
+/* 同 .ctl[hidden] 的坑：display:grid 会压过 hidden 属性的 UA 样式，必须显式兜底 */
+#authGate[hidden] { display: none; }
 .auth-card {
   width: min(320px, 88vw);
   display: flex;
