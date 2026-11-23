@@ -78,6 +78,26 @@ PY
   rm -f "$tmp"
 done
 
+# ---- 聚合订阅文件：把全部 playlists 合并成一个（供 iPad/iPhone IPTV App 订阅）----
+# 文件名固定（用户已在播放器里订阅，不能改名）；合并全部 *.m3u，剔除 #EXTM3U 重复头
+MERGE_NAME="kaitai-0x152k.m3u"
+if [ "$CHECK_ONLY" = 0 ]; then
+  merge="$OUT/#EXTM3U"
+  merged="$OUT/$MERGE_NAME.tmp"
+  echo "#EXTM3U" > "$merged"
+  n_total=0
+  for f in "$OUT"/*.m3u; do
+    bn=$(basename "$f")
+    [ "$bn" = "$MERGE_NAME" ] && continue
+    while IFS= read -r ln; do
+      echo "$ln" >> "$merged"
+      case "$ln" in "#EXTINF"*) n_total=$((n_total+1));; esac
+    done < <(grep -vE '^#EXTM3U|^$' "$f" | sed 's/$//')
+  done
+  mv "$merged" "$OUT/$MERGE_NAME"
+  echo "✅ 聚合订阅文件: $MERGE_NAME（$n_total 条）"
+fi
+
 if [ "$CHECK_ONLY" = 1 ]; then
   echo "（--check 模式，未写入任何文件）"
 else
