@@ -244,6 +244,24 @@ html[data-theme='dark'] .groups .gitem:hover { background: var(--surface-2); }
 .foot-btns { display: flex; align-items: center; gap: 2px; flex: 0 0 auto; }
 .count { font-size: 11px; color: var(--ink-3); padding: 0 6px; }
 
+/* 品牌图标（侧边栏左下角）：App 图标做小尺寸呈现 */
+.brand-logo {
+  width: 26px;
+  height: 26px;
+  border-radius: 6.5px;          /* 26px 下对应 iOS 圆角比例 */
+  flex: 0 0 auto;
+  display: block;
+  /* 白底图标在深浅两种主题里都压得住：细描边 + 轻投影 */
+  box-shadow: 0 0 0 1px rgba(0,0,0,.08), 0 1px 3px rgba(0,0,0,.18);
+  transition: transform .15s ease-out;
+  cursor: default;
+  user-select: none;
+}
+html[data-theme='dark'] .brand-logo {
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 1px 4px rgba(0,0,0,.45);
+}
+.brand-logo:hover { transform: scale(1.08); }
+
 /* ---------- 舞台 ---------- */
 .stage {
   flex: 1;
