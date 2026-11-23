@@ -1156,7 +1156,7 @@ function renderSrcSwitch() {
 }
 
 function playChannel(ch, src, auto) {
-  if (!auto) state.autoRetry = 0;   // 主动点击重置换线计数；自动重试递增
+  if (!auto) state.failedUrls = null;   // 主动点击清空失败线路记录；自动换线保留
   // 频道视图播放时带上了所属源：同步高亮 + 修复「上次频道」记录
   if (src) {
     state.activeSource = src;
@@ -1345,21 +1345,21 @@ function urlHint(url) {
 /* 浏览器端播放失败时自动换下一条线路（FLV/HLS 混合聚合的兜底体验） */
 function tryNextItemOnFail() {
   if (!state.current) return false;
+  const failed = state.current.url;
+  state.failedUrls = state.failedUrls || new Set();
+  state.failedUrls.add(failed);   // 记住失败过的线路，试遍为止不循环
   const agg = state.aggregated.find(
     (a) => normName(a.name) === normName(state.current.name)
   );
   if (!agg || agg.items.length < 2) return false;
-  const failed = state.current.url;
   const cands = agg.items.filter(
-    (it) => it.ch.url !== failed && /\.(m3u8|mp4)(\?|$)/i.test(it.ch.url)
+    (it) => !state.failedUrls.has(it.ch.url) && /\.(m3u8|mp4)(\?|$)/i.test(it.ch.url)
   );
   if (!cands.length) return false;
-  const idx = (state.autoRetry || 0) % cands.length;
-  state.autoRetry = (state.autoRetry || 0) + 1;
-  const it = cands[idx];
+  const it = cands[0];
   setOverlay(
     '这条线路不行，自动换线…',
-    '换到「' + it.src.name + '」线路（第 ' + state.autoRetry + ' 次尝试）',
+    '换到「' + it.src.name + '」线路，还剩 ' + (cands.length - 1) + ' 条可试',
     false
   );
   setTimeout(() => playChannel(it.ch, it.src, true), 1500);
