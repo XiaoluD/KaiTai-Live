@@ -34,7 +34,7 @@ namespace KaiTai
             _baseDir = AppDomain.CurrentDomain.BaseDirectory;
             _webRoot = Path.Combine(_baseDir, "web");
 
-            _web = new WebView2.WebView2 { Dock = DockStyle.Fill };
+            _web = new WinWebView2 { Dock = DockStyle.Fill };
             Controls.Add(_web);
 
             _mpvHost = new Panel { BackColor = Color.Black, Visible = false };
