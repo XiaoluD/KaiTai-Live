@@ -9,12 +9,14 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
+// 类名与命名空间段同名（Microsoft.Web.WebView2.WebView2），必须用别名引用
+using WinWebView2 = Microsoft.Web.WebView2.WinForms.WebView2;
 
 namespace KaiTai
 {
     public class MainForm : Form
     {
-        WebView2 _web;
+        WinWebView2 _web;
         Panel _mpvHost;
         string _mpvCurrentUrl;
         bool _mpvOn;
