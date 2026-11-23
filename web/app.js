@@ -1195,19 +1195,8 @@ function playChannel(ch, src, auto) {
   // 内嵌版优先：libmpv 能吃 FLV / 组播转单播 / HEVC，可播率比 <video> 高一截
   if (hasEmbeddedPlayer) {
     mpvPlay(ch.url);
-    if (mpvOn) mpvCall('logo', { url: ch.logo || '' });   // mpv 层盖在网页上，台标要原生贴
   } else {
     startBrowserPlay(ch.url);
-  }
-  // 台标：网页版直接叠 DOM（mpv 版被原生视图盖住，走上面的 logo 指令）
-  const logoEl = $('chanLogo');
-  if (logoEl) {
-    if (!hasEmbeddedPlayer && ch.logo) {
-      logoEl.src = ch.logo;
-      logoEl.hidden = false;
-    } else {
-      logoEl.hidden = true;
-    }
   }
 }
 
