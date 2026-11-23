@@ -7,12 +7,14 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.WinForms;
 
 namespace KaiTai
 {
     public class MainForm : Form
     {
-        WebView2.WebView2 _web;
+        WebView2 _web;
         Panel _mpvHost;
         string _mpvCurrentUrl;
         bool _mpvOn;
@@ -70,7 +72,7 @@ namespace KaiTai
                 MpvControl.Init(_mpvHost.Handle.ToInt64());
         }
 
-        void OnWebMessage(object sender, WebView2.CoreWebView2WebMessageReceivedEventArgs e)
+        void OnWebMessage(object sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             try
             {
