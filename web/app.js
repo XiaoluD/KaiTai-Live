@@ -434,6 +434,25 @@ function setupMobileUI() {
   $('railScrim').addEventListener('click', closeRail);
   // 旋转/调窗口时从窄屏转宽屏，抽屉态复位
   window.addEventListener('resize', () => { if (!isNarrow()) closeRail(); });
+
+  // iOS 外部播放器（VLC/Infuse，App Store 免签全格式内核）：
+  // Safari 的 <video> 对 IPTV 混合流天花板低，专业播放器 App 走 URL Scheme 直连播放
+  if (IS_IOS) {
+    $('openVlc').addEventListener('click', () => openExternalStream('vlc'));
+    $('openInfuse').addEventListener('click', () => openExternalStream('infuse'));
+  }
+}
+
+/* 用 VLC / Infuse 打开当前频道（URL Scheme，x-callback-url 标准） */
+function openExternalStream(kind) {
+  const url = state.current && state.current.url;
+  if (!url) return;
+  const enc = encodeURIComponent(url);
+  const target =
+    kind === 'vlc'
+      ? 'vlc://x-callback-url/stream?url=' + enc
+      : 'infuse://x-callback-url/play?url=' + enc;
+  window.location.href = target;
 }
 
 /* iOS 锁屏/灵动岛：显示正在播的频道，提供播放/暂停控制 */
@@ -1263,6 +1282,11 @@ function playChannel(ch, src, auto) {
   renderSrcSwitch();
   updateNowPlaying(ch);       // iPhone/iPad 锁屏与灵动岛显示正在播的频道
   closeRailOnNarrow();        // 手机窄屏：选完频道自动收起抽屉
+  // iOS 外部播放器按钮：选了频道才出现
+  if (IS_IOS) {
+    $('openVlc').hidden = !ch.url;
+    $('openInfuse').hidden = !ch.url;
+  }
   const pb = $('player');
   if (pb && !pb.hidden) pb.disabled = false;
   setOverlay('正在连接…', ch.url, false);
