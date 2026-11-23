@@ -162,10 +162,16 @@ function naturalCmp(x, y) {
   return 0;
 }
 
-/* 聚合频道默认线路：优先「默认」源，其次按 sources.json 顺序取第一个 */
+/* 聚合频道默认线路：优先「默认」源，其次按 sources.json 顺序取第一个。
+   浏览器/PWA 没有播放内核，<video> 解不了 FLV 直播流——默认线路优先挑 HLS/MP4 */
 function pickDefaultItem(agg) {
   const def = agg.items.find((it) => it.src.name === '默认' || it.src.id === 'self-iptv-api');
-  return def || agg.items[0];
+  if (def) return def;
+  if (!hasEmbeddedPlayer) {
+    const playable = agg.items.find((it) => /\.(m3u8|mp4)(\?|$)/i.test(it.ch.url));
+    if (playable) return playable;
+  }
+  return agg.items[0];
 }
 
 /* ---------- 外部播放器（只有 macOS app 里有这个原生桥） ---------- */
@@ -1149,7 +1155,8 @@ function renderSrcSwitch() {
   });
 }
 
-function playChannel(ch, src) {
+function playChannel(ch, src, auto) {
+  if (!auto) state.autoRetry = 0;   // 主动点击重置换线计数；自动重试递增
   // 频道视图播放时带上了所属源：同步高亮 + 修复「上次频道」记录
   if (src) {
     state.activeSource = src;
@@ -1335,8 +1342,34 @@ function urlHint(url) {
   return '';
 }
 
+/* 浏览器端播放失败时自动换下一条线路（FLV/HLS 混合聚合的兜底体验） */
+function tryNextItemOnFail() {
+  if (!state.current) return false;
+  const agg = state.aggregated.find(
+    (a) => normName(a.name) === normName(state.current.name)
+  );
+  if (!agg || agg.items.length < 2) return false;
+  const failed = state.current.url;
+  const cands = agg.items.filter(
+    (it) => it.ch.url !== failed && /\.(m3u8|mp4)(\?|$)/i.test(it.ch.url)
+  );
+  if (!cands.length) return false;
+  const idx = (state.autoRetry || 0) % cands.length;
+  state.autoRetry = (state.autoRetry || 0) + 1;
+  const it = cands[idx];
+  setOverlay(
+    '这条线路不行，自动换线…',
+    '换到「' + it.src.name + '」线路（第 ' + state.autoRetry + ' 次尝试）',
+    false
+  );
+  setTimeout(() => playChannel(it.ch, it.src, true), 1500);
+  return true;
+}
+
 function failPlayback(detail) {
   clearTimeout(state.timer);
+  // 浏览器端自动换线路：同频道聚合了多条线路（如 FLV 失败切 HLS），试遍为止
+  if (!hasEmbeddedPlayer && tryNextItemOnFail()) return;
   const hint = state.current ? urlHint(state.current.url) : '';
   // https 页面下浏览器拦截明文流（mixed content）：清单里 1141 条 http 源会被整体拦截，
   // 给出可操作的切换指引而不是让用户对着「域名可能已失效」发懵
