@@ -814,3 +814,58 @@ body.ios .volwrap { display: none; }
   text-decoration: none;
 }
 .ov-link:hover { opacity: .9; }
+
+/* ---------- 访问密码门 ---------- */
+#authGate {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  padding: env(safe-area-inset-top) 16px env(safe-area-inset-bottom);
+}
+.auth-card {
+  width: min(320px, 88vw);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 28px 24px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: var(--player-shadow);
+}
+.auth-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 13px;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.14), 0 2px 8px rgba(0,0,0,.25);
+}
+.auth-title { font-size: 17px; font-weight: 700; }
+.auth-sub { font-size: 12px; color: var(--ink-3); margin-bottom: 6px; }
+#authInput {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--ink);
+  font-size: 15px;
+  letter-spacing: .2em;
+  text-align: center;
+  outline: none;
+  transition: border-color .15s;
+}
+#authInput:focus { border-color: var(--accent); }
+#authBtn { width: 100%; height: 38px; margin-top: 2px; }
+.auth-err { min-height: 16px; font-size: 12px; color: var(--danger); }
+#authGate.shake .auth-card { animation: authShake .4s; }
+@keyframes authShake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  50% { transform: translateX(8px); }
+  75% { transform: translateX(-5px); }
+}

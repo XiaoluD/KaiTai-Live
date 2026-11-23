@@ -450,9 +450,49 @@ function updateNowPlaying(ch) {
   } catch (e) { /* MediaSession 失败不影响播放 */ }
 }
 
+/* ---------- 访问密码门（网页/PWA）：App 端免密 ---------- */
+
+// 密码 8800，base64 轻混淆（JS 源码可见，防君子不防小人——真正的门在「别人不知道这个地址」）
+const AUTH_PASS_B64 = 'ODgwMA==';
+const AUTH_KEY = 'kaitai-auth-ok';
+
+function authPassed() {
+  if (nativeBridge) return true;   // macOS App 本机使用，免密
+  try { return localStorage.getItem(AUTH_KEY) === 'ok'; }
+  catch (e) { return false; }
+}
+
+function showAuthGate() {
+  const gate = $('authGate');
+  gate.hidden = false;
+  const input = $('authInput');
+  const err = $('authErr');
+  const tryAuth = () => {
+    if (btoa(input.value.trim()) === AUTH_PASS_B64) {
+      try { localStorage.setItem(AUTH_KEY, 'ok'); } catch (e) {}
+      location.reload();
+      return;
+    }
+    err.textContent = '密码不对，再试试';
+    input.value = '';
+    gate.classList.add('shake');
+    setTimeout(() => gate.classList.remove('shake'), 420);
+    input.focus();
+  };
+  $('authBtn').addEventListener('click', tryAuth);
+  input.addEventListener('keydown', (e) => { if (e.key === 'Enter') tryAuth(); });
+  setTimeout(() => input.focus(), 60);
+}
+
 /* ---------- 启动 ---------- */
 
 async function boot() {
+  if (!authPassed()) {
+    // 密码门挡在最前：页面其余逻辑不初始化（列表/播放都不加载）
+    $('count').textContent = '未解锁';
+    showAuthGate();
+    return;
+  }
   try {
     const res = await fetch('./sources.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('sources.json ' + res.status);

@@ -19,6 +19,18 @@
 </head>
 <body>
 
+<!-- 访问密码门（网页/PWA）：App 端免密 -->
+<div id="authGate" hidden>
+  <div class="auth-card">
+    <img class="auth-logo" src="./icons/icon-192.png" alt="开台">
+    <div class="auth-title">开台</div>
+    <div class="auth-sub">私人频道站 · 请输入访问密码</div>
+    <input id="authInput" type="password" inputmode="numeric" autocomplete="off" placeholder="访问密码">
+    <button id="authBtn" class="btn">进 入</button>
+    <div class="auth-err" id="authErr"></div>
+  </div>
+</div>
+
 <header class="topbar">
   <!-- iPhone 窄屏：打开频道抽屉（桌面端隐藏） -->
   <button id="railToggle" class="iconbtn rail-toggle" title="频道列表" aria-label="频道列表">
