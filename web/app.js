@@ -504,7 +504,22 @@ function showAuthGate() {
 
 /* ---------- 启动 ---------- */
 
+/* https 自动跳回 http 版：https 页面会被浏览器「自动升级失败即拦截」 http 媒体
+   （Safari 最严格），http 入口才能播全量源。仅本站域名触发；sessionStorage 防循环
+   （Chrome 会把 http 导航强升回 https，跳过一次后落在 https 就不再跳、走 https 提示）。 */
+function redirectIfHttps() {
+  if (location.protocol !== 'https:') return false;
+  if (location.hostname !== 'iptv.wusi321.top') return false;
+  try {
+    if (sessionStorage.getItem('kaitai-http-jump') === '1') return false;
+    sessionStorage.setItem('kaitai-http-jump', '1');
+    location.replace('http://iptv.wusi321.top' + location.pathname + location.search);
+    return true;
+  } catch (e) { return false; }
+}
+
 function boot() {
+  if (redirectIfHttps()) return;
   if (!authPassed()) {
     // 密码门挡在最前：页面其余逻辑不初始化（列表/播放都不加载）
     $('count').textContent = '未解锁';
