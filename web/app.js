@@ -113,14 +113,13 @@ async function loadAllSources() {
     }
   }
 
-  // 排序：分类分块 → 央视里 CCTV 数字序在前 → 卫视按热度榜 → 其余自然序
+  // 排序：分类分块 → 央视主台按数字序、衍生频道（4K/欧洲/美洲/5+ 等）统一靠后 → 卫视按热度榜 → 其余自然序
   state.aggregated.sort((a, b) => {
     const ca = CATS.indexOf(a.cat), cb = CATS.indexOf(b.cat);
     if (ca !== cb) return ca - cb;
     if (a.cat === '央视频道') {
-      const pa = /^CCTV/i.test(a.name) ? 0 : 1;
-      const pb = /^CCTV/i.test(b.name) ? 0 : 1;
-      if (pa !== pb) return pa - pb;
+      const ra = cctvMainRank(a.name), rb = cctvMainRank(b.name);
+      if (ra !== rb) return ra - rb;   // 主台 1..99 < 衍生 1000+；衍生组内走自然序
     }
     if (a.cat === '卫视频道') {
       const ra = satvRank(a.name), rb = satvRank(b.name);
@@ -129,6 +128,14 @@ async function loadAllSources() {
     return naturalCmp(a.name, b.name);
   });
   aggLoaded = true;
+}
+
+/* 央视主台序：CCTV-1..17 取台号；衍生（CCTV4K、CCTV4欧洲、CCTV5+、CCTV-6电影…）归入 1000+ 尾部 */
+function cctvMainRank(name) {
+  const n = String(name || '').toUpperCase().replace(/[\s-]/g, '');
+  const m = /^CCTV(\d{1,2})$/.exec(n);
+  if (m) return parseInt(m[1], 10);
+  return 1000;
 }
 
 /* 高清台标映射：CCTV-1..17 / CCTV5+ / CGTN 系列 */
