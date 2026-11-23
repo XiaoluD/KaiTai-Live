@@ -350,7 +350,8 @@ let mpvPaused = false;
 const VOL_KEY = 'kaitai-vol';
 
 function curVol() {
-  const v = parseInt(localStorage.getItem(VOL_KEY) ?? '100', 10);
+  let v = 100;
+  try { v = parseInt(localStorage.getItem(VOL_KEY) ?? '100', 10); } catch (e) {}
   return Number.isFinite(v) ? Math.min(100, Math.max(0, v)) : 100;
 }
 
@@ -456,10 +457,23 @@ function updateNowPlaying(ch) {
 const AUTH_PASS_B64 = 'ODgwMA==';
 const AUTH_KEY = 'kaitai-auth-ok';
 
+// 双存储：localStorage 会被 Safari 无痕/隐私设置拒写（静默失败导致「输了密码进不去」），
+// cookie 作会话级备份；两处任一通过即放行
 function authPassed() {
   if (nativeBridge) return true;   // macOS App 本机使用，免密
+  if (document.cookie.indexOf(AUTH_KEY + '=ok') !== -1) return true;
   try { return localStorage.getItem(AUTH_KEY) === 'ok'; }
   catch (e) { return false; }
+}
+
+function saveAuthMark() {
+  try { localStorage.setItem(AUTH_KEY, 'ok'); } catch (e) { /* 无痕/禁存储：忽略 */ }
+  document.cookie = AUTH_KEY + '=ok; path=/; max-age=31536000; SameSite=Lax';
+}
+
+// 全角数字转半角（iOS 第三方键盘可能敲出 ８８００）
+function normalizeDigits(s) {
+  return s.trim().replace(/[０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xFEE0));
 }
 
 function showAuthGate() {
@@ -468,9 +482,10 @@ function showAuthGate() {
   const input = $('authInput');
   const err = $('authErr');
   const tryAuth = () => {
-    if (btoa(input.value.trim()) === AUTH_PASS_B64) {
-      try { localStorage.setItem(AUTH_KEY, 'ok'); } catch (e) {}
-      location.reload();
+    if (btoa(normalizeDigits(input.value)) === AUTH_PASS_B64) {
+      saveAuthMark();
+      gate.hidden = true;   // 软进入：不整页 reload——存储被禁时 reload 会死循环回密码框
+      initApp();
       return;
     }
     err.textContent = '密码不对，再试试';
@@ -486,13 +501,17 @@ function showAuthGate() {
 
 /* ---------- 启动 ---------- */
 
-async function boot() {
+function boot() {
   if (!authPassed()) {
     // 密码门挡在最前：页面其余逻辑不初始化（列表/播放都不加载）
     $('count').textContent = '未解锁';
     showAuthGate();
     return;
   }
+  initApp();
+}
+
+async function initApp() {
   try {
     const res = await fetch('./sources.json', { cache: 'no-store' });
     if (!res.ok) throw new Error('sources.json ' + res.status);
@@ -609,10 +628,12 @@ function setupAppUpdate() {
 /* ---------- 设置（localStorage 持久化） ---------- */
 
 const SET_KEY = 'kaitai-settings';
+let savedSettings = {};
+try { savedSettings = JSON.parse(localStorage.getItem(SET_KEY) || '{}') || {}; } catch (e) {}
 const settings = Object.assign(
   { theme: 'light', view: 'channels', density: 'normal', resume: true, hwdec: true,
     hotkeys: true, autoCheck: true, autoInstall: true },
-  JSON.parse(localStorage.getItem(SET_KEY) || '{}')
+  savedSettings
 );
 
 function saveSettings(patch) {
