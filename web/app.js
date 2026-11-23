@@ -1344,8 +1344,9 @@ function failPlayback(detail) {
     setOverlay(
       'https 页面播不了明文源',
       '这个频道是 http:// 开头的流，浏览器会拦截 https 页面里的明文媒体（mixed content）。' +
-      '用 http://iptv.wusi321.top 访问即可播放全部频道（http 入口已开放，收藏这条地址即可）。',
-      true
+      '点下面按钮切到 http 版即可播放全部频道，建议重新「添加到主屏幕」收藏 http 地址。',
+      true,
+      { href: 'http://iptv.wusi321.top', text: '→ 切换到 http 版（可播全部频道）' }
     );
     return;
   }
@@ -1377,7 +1378,7 @@ function destroyHls() {
 
 /* ---------- 覆盖层 ---------- */
 
-function setOverlay(title, sub, bad) {
+function setOverlay(title, sub, bad, link) {
   const ov = $('overlay');
   if (!title) {
     ov.classList.add('hide');
@@ -1396,6 +1397,13 @@ function setOverlay(title, sub, bad) {
   s.textContent = sub || '';
 
   ov.append(t, s);
+  if (link) {
+    const a = document.createElement('a');
+    a.href = link.href;
+    a.textContent = link.text;
+    a.className = 'ov-link';
+    ov.append(a);
+  }
 }
 
 /* ---------- m3u 解析 ---------- */

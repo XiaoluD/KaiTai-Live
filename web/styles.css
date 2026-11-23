@@ -800,3 +800,17 @@ body.ios .volwrap { display: none; }
   /* 频道列表吃掉剩余高度（rail 本身已可滚，列表自然延展） */
   .chans { flex: 0 0 auto; overflow: visible; }
 }
+
+/* 失败提示里的切换链接（如 https→http 引导） */
+.ov-link {
+  display: inline-block;
+  margin-top: 14px;
+  padding: 9px 18px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.ov-link:hover { opacity: .9; }
