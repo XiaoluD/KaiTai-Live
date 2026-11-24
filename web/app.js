@@ -55,6 +55,8 @@ function stripQual(name) {
   // 括号内是清晰度标记的整段删除（其他括号内容保留）
   n = n.replace(/[（(【\[][^）)】\]]*[）)】\]]/g, (m) =>
     /(\d{3,4}p|4k|8k|fhd|uhd|hd|超清|高清|标清|蓝光)/i.test(m) ? '' : m);
+  // 4K/8K/4K超高清/8K超高清 是频道身份整体保留：CCTV8K超高清 → CCTV8K（先剥"超高清"尾缀，避免只剩"CCTV8K超"）
+  n = n.replace(/(4K|8K|16K)超高清$/i, '$1');
   // 裸尾缀只剥 HD/超清/高清/标清/蓝光/分辨率数字；4K/8K 是频道身份（CCTV-8K），不动
   n = n.replace(/\s*(超清|高清|标清|蓝光|fhd|uhd|hd|\d{3,4}p)\s*$/i, '');
   return n.replace(/\s{2,}/g, ' ').trim();
