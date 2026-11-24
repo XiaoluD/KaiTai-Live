@@ -102,7 +102,7 @@ async function loadAllSources() {
     for (const ch of channels) {
       if (!normName(ch.name)) continue;
       state.aggregated.push({
-        name: stripQual(ch.name), logo: ch.logo || '', fallbackLogo: '',
+        name: ch.name, logo: ch.logo || '', fallbackLogo: '',
         cat: (ch.group || '').trim() || classifyChannel(ch.name, ch.group), items: [{ src, ch }]
       });
     }
@@ -117,21 +117,10 @@ async function loadAllSources() {
     }
   }
 
-  // 排序：按清单原生分组出现顺序（跟随 akira 内部分组，不重写）→ 央视主台按数字序 → 卫视按热度榜 → 其余自然序
+  // 排序：只按清单原生分组出现顺序（跟随 akira 内部分组），组内保持源 m3u 原生条序不重排
+  // —— 与《IPTV频道分类一比一清单》Excel 的分组对比逐行一致
   const groupOrder = [...new Set(state.aggregated.map((a) => a.cat))];
-  state.aggregated.sort((a, b) => {
-    const ca = groupOrder.indexOf(a.cat), cb = groupOrder.indexOf(b.cat);
-    if (ca !== cb) return ca - cb;
-    if (a.cat === '央视频') {
-      const ra = cctvMainRank(a.name), rb = cctvMainRank(b.name);
-      if (ra !== rb) return ra - rb;   // 主台 1..99 < 衍生 1000+；衍生组内走自然序
-    }
-    if (a.cat === '卫视') {
-      const ra = satvRank(a.name), rb = satvRank(b.name);
-      if (ra !== rb) return ra - rb;
-    }
-    return naturalCmp(a.name, b.name);
-  });
+  state.aggregated.sort((a, b) => groupOrder.indexOf(a.cat) - groupOrder.indexOf(b.cat));
   aggLoaded = true;
 }
 
@@ -146,7 +135,7 @@ function cctvMainRank(name) {
 /* 高清台标映射：CCTV-1..17 / CCTV5+ / CGTN 系列 */
 function premiumLogo(name) {
   const n = String(name || '').toUpperCase().replace(/[\s-]/g, '');
-  const m = /^CCTV(\d{1,2})(\+?)($|[^0-9])/.exec(n);
+  const m = /^CCTV(\d{1,2})(\+?)(?![A-Za-z0-9])/.exec(n);   // 负向断言：CCTV4K超高清 不误配 CCTV4 台标
   if (m) return 'https://live.fanmingming.com/tv/CCTV' + m[1] + m[2] + '.png';
   if (/^CGTN/.test(n)) {
     if (/^CGTNDOC/.test(n)) return 'https://live.fanmingming.com/tv/CGTNDOC.png';
@@ -497,7 +486,7 @@ function updateNowPlaying(ch) {
   try {
     const logo = premiumLogo(ch.name);
     navigator.mediaSession.metadata = new window.MediaMetadata({
-      title: stripQual(ch.name),
+      title: ch.name,
       artist: ch.group || 'IPTV 直播',
       artwork: logo ? [{ src: logo, sizes: '512x512', type: 'image/png' }] : [],
     });
@@ -1274,7 +1263,7 @@ function renderList() {
 
     const nm = document.createElement('div');
     nm.className = 'nm';
-    nm.textContent = isDup ? stripQual(c.name) + ' ·' + idx : stripQual(c.name);
+    nm.textContent = isDup ? c.name + ' ·' + idx : c.name;
 
     const gp = document.createElement('div');
     gp.className = 'gp';
@@ -1406,7 +1395,7 @@ function playChannel(ch, src, auto) {
     el.classList.toggle('on', el.dataset.url === ch.url);
   });
 
-  $('now').textContent = stripQual(ch.name) + (ch.group ? ' · ' + ch.group : '');
+  $('now').textContent = ch.name + (ch.group ? ' · ' + ch.group : '');
   renderSrcSwitch();
   updateNowPlaying(ch);       // iPhone/iPad 锁屏与灵动岛显示正在播的频道
   closeRailOnNarrow();        // 手机窄屏：选完频道自动收起抽屉
