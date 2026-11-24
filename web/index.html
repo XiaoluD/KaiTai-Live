@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- viewport-fit=cover：iPhone 刘海/灵动岛与底部横条内容延伸，布局用 safe-area 补偿 -->
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1">
-<title>开台 · IPTV</title>
+<title>开台直播 · 网络电视</title>
 <meta name="theme-color" content="#101216">
 <!-- iOS 添加到主屏幕（PWA） -->
 <link rel="manifest" href="./manifest.json">
@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="开台">
+<meta name="apple-mobile-web-app-title" content="开台直播">
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
@@ -22,8 +22,8 @@
 <!-- 访问密码门（网页/PWA）：App 端免密 -->
 <div id="authGate" hidden>
   <div class="auth-card">
-    <img class="auth-logo" src="./icons/icon-192.png" alt="开台">
-    <div class="auth-title">开台</div>
+    <img class="auth-logo" src="./icons/icon-192.png" alt="开台直播">
+    <div class="auth-title">开台直播</div>
     <div class="auth-sub">私人频道站 · 请输入访问密码</div>
     <input id="authInput" type="password" inputmode="numeric" autocomplete="off" placeholder="访问密码">
     <button id="authBtn" class="btn">进 入</button>
@@ -57,7 +57,7 @@
     <div class="rail-foot">
       <div class="upd-status" id="updStatus"></div>
       <div class="foot-row">
-        <img class="brand-logo" src="./icons/icon-192.png" alt="开台" title="开台 · IPTV">
+        <img class="brand-logo" src="./icons/icon-192.png" alt="开台直播" title="开台直播 · 网络电视">
         <div class="count" id="count">加载中…</div>
         <div class="foot-btns">
           <button id="updSourcesBtn" class="iconbtn" title="更新源（实测筛选后保存）" aria-label="更新源">

@@ -473,7 +473,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         win.titlebarAppearsTransparent = true
         win.titleVisibility = .hidden
         win.isMovableByWindowBackground = true
-        win.title = "开台"
+        win.title = "开台直播"
         win.minSize = NSSize(width: 900, height: 600)
         win.center()
 
@@ -676,13 +676,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "关于开台", action: nil, keyEquivalent: "")
+        appMenu.addItem(withTitle: "关于开台直播", action: nil, keyEquivalent: "")
         appMenu.addItem(.separator())
         appMenu.addItem(menuItem("检查更新", action: "checkupd", key: "u"))
         appMenu.addItem(menuItem("设置…", action: "settings", key: ","))
         appMenu.addItem(.separator())
-        appMenu.addItem(withTitle: "隐藏开台", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
-        appMenu.addItem(withTitle: "退出开台", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenu.addItem(withTitle: "隐藏开台直播", action: #selector(NSApplication.hide(_:)), keyEquivalent: "h")
+        appMenu.addItem(withTitle: "退出开台直播", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
         appItem.submenu = appMenu
         mainMenu.addItem(appItem)
 

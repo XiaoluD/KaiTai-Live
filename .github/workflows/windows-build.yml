@@ -58,7 +58,7 @@ jobs:
         with:
           files: kaitai-windows-x64.zip
           body: |
-            开台 Windows 版（自带 libmpv 内核）
+            开台直播 Windows 版（自带 libmpv 内核）
 
             **安装**：解压到任意目录 → 运行 KaiTai.exe（需 Windows 10/11 x64）
             **注意**：解压路径建议避开 C:\Program Files（本地服务需写 playlists）

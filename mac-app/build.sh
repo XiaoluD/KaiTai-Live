@@ -15,11 +15,11 @@ APP_VERSION="${APP_VERSION:-1.0.0}"
 
 case "$VARIANT" in
   lite)
-    APP_NAME="开台"
+    APP_NAME="开台直播"
     BUNDLE_ID="io.github.xiaolud.kaitai"
     ;;
   embedded)
-    APP_NAME="开台 Full"
+    APP_NAME="开台直播"
     BUNDLE_ID="io.github.xiaolud.kaitai.embedded"
     ;;
   *)
@@ -27,6 +27,13 @@ case "$VARIANT" in
     exit 2
     ;;
 esac
+
+# 名字三分离（v1.0.9「开台」→「开台直播」，加品类词，一眼看出是直播类）：
+#   APP_NAME         bundle 目录名 / zip 内文件名 / 构建产物名
+#   APP_DISPLAY_NAME Dock / 启动台 / Finder 显示名
+#   APP_MENU_NAME    菜单栏程序名（CFBundleName，太长会挤占菜单栏）
+APP_DISPLAY_NAME="开台直播"
+APP_MENU_NAME="开台"
 
 APP="$HERE/build/$APP_NAME.app"
 CONTENTS="$APP/Contents"
@@ -119,10 +126,10 @@ cp -R "$ROOT/web" "$CONTENTS/Resources/web"
 rm -rf "$CONTENTS/Resources/web/.DS_Store"
 
 echo "== 复制图标"
-# 内嵌版用带 Full 徽章的图标；没有就退回通用图标
+# 图标带 LIVE 徽章（v1.0.9 起；旧版是区分变体的 Full 徽章）
 ICON_SRC="$HERE/icon/icon.icns"
-if [ "$VARIANT" = "embedded" ] && [ -f "$HERE/icon/icon-full.icns" ]; then
-  ICON_SRC="$HERE/icon/icon-full.icns"
+if [ "$VARIANT" = "embedded" ] && [ -f "$HERE/icon/icon-live.icns" ]; then
+  ICON_SRC="$HERE/icon/icon-live.icns"
 fi
 if [ -f "$ICON_SRC" ]; then
   cp "$ICON_SRC" "$CONTENTS/Resources/icon.icns"
@@ -159,9 +166,9 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 <plist version="1.0">
 <dict>
 	<key>CFBundleName</key>
-	<string>$APP_NAME</string>
+	<string>$APP_MENU_NAME</string>
 	<key>CFBundleDisplayName</key>
-	<string>$APP_NAME</string>
+	<string>$APP_DISPLAY_NAME</string>
 	<key>CFBundleExecutable</key>
 	<string>$BIN_NAME</string>
 	<key>CFBundleIdentifier</key>

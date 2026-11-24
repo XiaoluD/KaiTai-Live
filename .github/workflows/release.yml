@@ -29,7 +29,7 @@ jobs:
       - name: 打包 zip
         run: |
           mkdir -p dist
-          ditto -c -k --keepParent "mac-app/build/开台 Full.app" "dist/kaitai-full-arm64.zip"
+          ditto -c -k --keepParent "mac-app/build/开台直播.app" "dist/kaitai-full-arm64.zip"
 
       - name: 发布 Release
         uses: softprops/action-gh-release@v2

@@ -1,4 +1,4 @@
-// 开台 Windows 版主窗体：WebView2 显示界面 + libmpv 盖在 #screen 区域播放（与 mac-app 同构）
+// 开台直播 Windows 版主窗体：WebView2 显示界面 + libmpv 盖在 #screen 区域播放（与 mac-app 同构）
 using System;
 using System.Collections.Generic;
 using System.Drawing;
@@ -25,7 +25,7 @@ namespace KaiTai
 
         public MainForm()
         {
-            Text = "开台 · IPTV";
+            Text = "开台直播 · 网络电视";
             Width = 1120;
             Height = 760;
             StartPosition = FormStartPosition.CenterScreen;
@@ -47,11 +47,11 @@ namespace KaiTai
                 try { url = server.Start(_webRoot); }
                 catch (Exception e)
                 {
-                    MessageBox.Show(e.Message, "开台");
+                    MessageBox.Show(e.Message, "开台直播");
                     Close();
                     return;
                 }
-                Text = "开台 · IPTV";
+                Text = "开台直播 · 网络电视";
                 await _web.EnsureCoreWebView2Async();
                 _web.CoreWebView2.WebMessageReceived += OnWebMessage;
                 _web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;

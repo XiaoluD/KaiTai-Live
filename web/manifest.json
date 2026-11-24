@@ -1,6 +1,6 @@
 {
-  "name": "开台 · IPTV",
-  "short_name": "开台",
+  "name": "开台直播 · 网络电视",
+  "short_name": "开台直播",
   "description": "内置播放内核的 IPTV 直播：多源聚合、分类导航",
   "lang": "zh-CN",
   "start_url": "./index.html?view=channels",

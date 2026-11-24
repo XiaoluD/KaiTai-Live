@@ -7,7 +7,9 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>KaiTai</AssemblyName>
-    <Version>1.0.8</Version>
+    <AssemblyTitle>开台直播</AssemblyTitle>
+    <Product>开台直播 · 网络电视</Product>
+    <Version>1.0.9</Version>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

@@ -93,7 +93,7 @@ final class MpvPlayerView: NSView {
         mpv_set_option_string(h, "keep-open", "no")
         mpv_set_option_string(h, "terminal", "no")
         mpv_set_option_string(h, "hwdec", "videotoolbox")
-        mpv_set_option_string(h, "audio-client-name", "开台 Full")
+        mpv_set_option_string(h, "audio-client-name", "开台直播")
         mpv_set_option_string(h, "cache", "yes")
         mpv_set_option_string(h, "demuxer-max-bytes", "48MiB")
         mpv_set_option_string(h, "network-timeout", "15")

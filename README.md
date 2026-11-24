@@ -1,4 +1,4 @@
-# 开台 · KaiTai
+# 开台直播 · KaiTai Live
 
 内置 libmpv 播放内核的 macOS 直播 App。点开频道就出画面，无广告、无依赖、关窗即释放资源。
 
@@ -32,7 +32,7 @@
 
 ```bash
 brew install mpv dylibbundler     # libmpv 内核 + 依赖收拢工具
-./mac-app/build.sh                # 产出 dist/开台-full-arm64.app
+./mac-app/build.sh                # 产出 mac-app/build/开台直播.app
 ```
 
 libmpv 位置由 `MPV_PREFIX` 变量控制（默认 `~/.kaitai/mpv`），换库不用改源码。
@@ -42,7 +42,7 @@ libmpv 位置由 `MPV_PREFIX` 变量控制（默认 `~/.kaitai/mpv`），换库�
 App 未签名未公证，首次打开：右键 →「打开」，或
 
 ```bash
-xattr -dr com.apple.quarantine "/Applications/开台 Full.app"
+xattr -dr com.apple.quarantine "/Applications/开台直播.app"
 ```
 
 ## 目录结构
