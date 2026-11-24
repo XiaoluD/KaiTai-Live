@@ -95,23 +95,18 @@ async function loadAllSources() {
     }
   }));
 
-  const map = new Map();
+  // 一比一聚合：清单里每条线路独立成条（与源 m3u 逐行对应，不做同名合并）；
+  // 同频道的多线路仍可通过播放页的「换线路」找到（按 normName 动态关联）
+  state.aggregated = [];
   for (const { src, channels } of results) {
     for (const ch of channels) {
-      const key = normName(ch.name);
-      if (!key) continue;
-      if (!map.has(key)) {
-        map.set(key, {
-          name: stripQual(ch.name), logo: '', fallbackLogo: '',
-          cat: (ch.group || '').trim() || classifyChannel(ch.name, ch.group), items: []
-        });
-      }
-      const agg = map.get(key);
-      if (!agg.logo && ch.logo) agg.logo = ch.logo;
-      agg.items.push({ src, ch });
+      if (!normName(ch.name)) continue;
+      state.aggregated.push({
+        name: stripQual(ch.name), logo: ch.logo || '', fallbackLogo: '',
+        cat: (ch.group || '').trim() || classifyChannel(ch.name, ch.group), items: [{ src, ch }]
+      });
     }
   }
-  state.aggregated = [...map.values()];
 
   // CCTV 系列统一换成高清台标（fanmingming/live 图床，640×360 透明底）；失败回退源 logo
   for (const a of state.aggregated) {
@@ -986,7 +981,8 @@ function toast(text) {
 /* ---------- 网页/PWA 的更新源：无原生桥，fetch + <video> 实测 + 存 localStorage ---------- */
 /* 保存的列表按设备隔离（本机浏览器专用），加载时覆盖服务器上的 playlists 文件 */
 
-const PLAYLIST_OVERRIDES_KEY = 'kaitai-playlist-overrides';
+/* v2：换源后旧覆盖快照不再复用，强制以部署清单为准（旧 key 数据留作回滚存档） */
+const PLAYLIST_OVERRIDES_KEY = 'kaitai-playlist-overrides-v2';
 
 function readPlaylistOverrides() {
   try { return JSON.parse(localStorage.getItem(PLAYLIST_OVERRIDES_KEY) || '{}'); }
@@ -1346,7 +1342,7 @@ function renderChannelList() {
     nm.textContent = a.name;
     const meta = document.createElement('div');
     meta.className = 'meta';
-    meta.textContent = a.items.length + ' 个源 · ' + a.cat;
+    meta.textContent = a.cat;   // 一比一聚合后每条线路单独成条，「N 个源」不再有意义
     col.append(nm, meta);
 
     btn.append(img, col);
@@ -1368,17 +1364,17 @@ function renderSrcSwitch() {
   const box = $('srcSwitch');
   box.innerHTML = '';
   if (!state.current) return;
-  const agg = state.aggregated.find((a) =>
-    a.items.some((it) => it.ch.url === state.current.url));
-  if (!agg || agg.items.length < 2) return;
+  // 一比一聚合后同名线路分散在多个 entry：按 normName 跨 entry 收集同频道线路
+  const routes = state.aggregated
+    .filter((a) => normName(a.name) === normName(state.current.name))
+    .flatMap((a) => a.items);
+  if (routes.length < 2) return;
 
   const labelCount = {};
-  agg.items.forEach((it) => {
+  routes.forEach((it) => {
     let label = it.src.name;
-    if (it.ch.name !== agg.name) {
-      const q = qualTag(it.ch.name);
-      label += ' · ' + (q || it.ch.name);
-    }
+    const q = qualTag(it.ch.name);
+    if (q) label += ' · ' + q;
     if (labelCount[label]) {
       labelCount[label] += 1;
       label += ' ' + labelCount[label];
@@ -1582,13 +1578,13 @@ function tryNextItemOnFail() {
   const failed = state.current.url;
   state.failedUrls = state.failedUrls || new Set();
   state.failedUrls.add(failed);   // 记住失败过的线路，试遍为止不循环
-  const agg = state.aggregated.find(
-    (a) => normName(a.name) === normName(state.current.name)
-  );
-  if (!agg || agg.items.length < 2) return false;
-  const cands = agg.items.filter(
-    (it) => !state.failedUrls.has(it.ch.url) && /\.(m3u8|mp4)(\?|$)/i.test(it.ch.url)
-  );
+  // 一比一聚合后同名线路分散在多个 entry，按 normName 跨 entry 收集候选
+  const cands = state.aggregated
+    .filter((a) => normName(a.name) === normName(state.current.name))
+    .flatMap((a) => a.items)
+    .filter(
+      (it) => !state.failedUrls.has(it.ch.url) && /\.(m3u8|mp4)(\?|$)/i.test(it.ch.url)
+    );
   if (!cands.length) return false;
   const it = cands[0];
   setOverlay(
