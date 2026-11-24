@@ -8,6 +8,19 @@
 #       它由本机跑 .runtime/iptv-api 生成（update_interval / launchd 自定）。
 
 set -uo pipefail
+
+# ---- 2026-11-24 起本脚本停用：源统一为 akira 单一源 ----
+# 原职责：拉上游公共列表 → 合并全部 *.m3u 成 kaitai-0x152k.m3u 聚合池。
+# 现状：kaitai-0x152k.m3u 就是 akira 容器清单（667 条，URL 已改写为 /akira/ 代理）。
+# 危险：web/playlists/ 里已无其他 *.m3u，再跑本脚本会把清单合并成空文件（只剩 #EXTM3U 头），
+#       并重新拉回已废弃的公共源。因此在入口直接退出。
+# akira 清单的正确生成方式（在仓库根目录执行）：
+#   ssh aliyun101-root 'curl -s -m 40 http://127.0.0.1:10010/@WSX3edc4rfv/' \
+#     | sed 's|http://127\.0\.0\.1:10010/@WSX3edc4rfv/|https://iptv.wusi321.top/akira/|g' \
+#     > web/playlists/kaitai-0x152k.m3u
+echo "本脚本已停用：当前只维护 akira 单一源，不再拉取公共源或合并聚合池。"
+echo "如需重建 akira 清单，详见本文件头部注释中的命令。"
+exit 0
 HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 RAW="$ROOT/01-公共源/raw"

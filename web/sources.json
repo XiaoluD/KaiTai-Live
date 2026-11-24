@@ -10,7 +10,7 @@
       "url": "https://iptv.wusi321.top/playlists/kaitai-0x152k.m3u",
       "sync": true,
       "trusted": true,
-      "note": "akiralereal/iptv 自托管聚合源（ECS Docker 1905→10010）| 671 频道，分组跟随 akira 内部分组透传（央视频/央视景观/卫视/体育/少儿/国际/教育/文旅/港澳台/地方台+各省组/景观组）| 清单/台标/EPG 经 nginx /akira/ 元数据代理（https 同源），视频分片直连 CDN | EPG: https://iptv.wusi321.top/akira/playback.xml | 旧聚合源清单备份: kaitai-0x152k.m3u.bak-akira-20261124"
+      "note": "akiralereal/iptv 自托管聚合源（ECS Docker 1905→10010），本项目唯一源（2026-11-24 起移除公共源聚合池）| 667 频道，分组跟随 akira 内部分组透传（央视频/央视景观/卫视/体育/少儿/国际/教育/文旅/港澳台/地方台+各省组/景观组）| 清单/台标/EPG 经 nginx /akira/ 元数据代理（https 同源），视频分片直连 CDN | EPG: https://iptv.wusi321.top/akira/playback.xml | 旧聚合清单见 git 历史（e3ca436 及更早）"
     }
   ]
 }

@@ -11,12 +11,12 @@
 
 ## 特性
 
-- **双视图**：频道视图（跨源聚合同名频道，一键换线路）与播放源视图，设置里切换
+- **双视图**：频道视图（同名频道聚合，一键换线路）与播放源视图，设置里切换
 - **分类导航**：央视频道 / 卫视频道 / 港澳台 / 其他；央视按台号排序，卫视按热度排序
 - **内嵌 libmpv**：HLS / FLV / RTMP / MPEG-TS 全格式直连，视频流直连源站，不消耗任何服务器带宽
-- **多源聚合**：自动合并多个 m3u 源，同名频道（含不同清晰度变体）聚合为一条，线路一键切换
-- **源自动同步**：服务端精选清单（已在服务端逐条抓帧验台标）更新后，App 启动静默比对并落盘，无需重新打包
-- **一键更新源**：手动重新拉取公共源并用 `<video>` 实测筛选，只留点开就能播的线路
+- **同名线路聚合**：清单里同一频道的多条线路（含不同清晰度变体）聚合为一条，线路一键切换
+- **源自动同步**：服务端清单更新后，App 启动静默比对并落盘，无需重新打包
+- **一键更新源**：手动重新拉取当前源清单（`trusted` 源跳过客户端实测，避免误杀）
 - **画质台标**：CCTV 系列用高清台标图床，自动适配深浅色主题
 - **播放器交互**：点击画面暂停/播放（中央状态徽标）、**点音量图标一键静音**（再点恢复静音前的实际音量）、全屏、快捷键齐全
 - **原生菜单栏**：复制/打开当前频道直链、更新播放源、检查更新（支持应用内自动更新）
@@ -85,12 +85,26 @@ iptv-web/
 ├── web/                ← 界面层（WKWebView / WebView2 加载）：index.html / app.js / styles.css / sources.json / playlists
 ├── mac-app/            ← macOS 原生壳：main.swift（窗口/菜单/mpv 桥）、Updater.swift（自动更新）、MpvPlayer.swift、build.sh、icon/
 ├── windows-app/KaiTai/ ← Windows 原生壳：.NET 8 WinForms + WebView2 + libmpv(P/Invoke)
-├── scripts/            ← update-sources.sh（拉取公共源）、release.sh（本地出包）
+├── scripts/            ← update-sources.sh（已停用，源统一为 akira 单一源）、release.sh（本地出包）
 ├── deploy/             ← ECS 部署：sync.sh（rsync + 远端 chmod）、nginx.conf、crontab.txt
-├── 01-公共源/          ← 公共源同步与校验（sync-public.sh / verify.py / deep-verify.sh）
-├── 02-自建Fork/        ← 自建 iptv-api 源同步
-└── .github/workflows/  ← release.yml（macOS）、windows-build.yml、update-sources.yml（每日更新公共源）
+├── 01-公共源/          ← 【留档】公共源同步与校验（sync-public.sh / verify.py / deep-verify.sh）
+├── 02-自建Fork/        ← 【留档】自建 iptv-api 源同步
+└── .github/workflows/  ← release.yml（macOS）、windows-build.yml、update-sources.yml（仅保留手动触发）
 ```
+
+## 播放源
+
+当前只有一个源：**akira**（`akiralereal/iptv` 自托管于 ECS Docker，1905 → 10010 端口），667 个频道，清单由服务端 nginx 的 `/akira/` 反代输出，视频分片直连上游 CDN、不占服务器带宽。
+
+重建清单（源站分组或频道有变动时）：
+
+```bash
+ssh aliyun101-root 'curl -s -m 40 http://127.0.0.1:10010/@WSX3edc4rfv/' \
+  | sed 's|http://127\.0\.0\.1:10010/@WSX3edc4rfv/|https://iptv.wusi321.top/akira/|g' \
+  > web/playlists/kaitai-0x152k.m3u
+```
+
+公共源聚合池已于 2026-11-24 移除：`web/playlists/` 只保留这一份清单，`update-sources.sh` 已加停用保护（否则会把聚合结果写成空清单）。
 
 ## 更新机制
 
@@ -99,9 +113,9 @@ iptv-web/
 | 通道 | 触发 | 行为 |
 |---|---|---|
 | 应用本体 | 设置 → 关于 → 检查更新，或启动静默检查 | 比对 `releases/latest` 的 tag 与 `CFBundleShortVersionString`，命中则下载 zip、换包、重启 |
-| 频道源 | App 启动 / 菜单「更新播放源」 | 静默比对服务端 `playlists/self-iptv-api.m3u`（按频道集合 diff，仅注释差异不写盘），有变化落盘并提示；手动更新则会重新实测公共源 |
+| 频道源 | App 启动 / 菜单「更新播放源」 | 静默比对服务端 `playlists/kaitai-0x152k.m3u`（按频道集合 diff，仅注释差异不写盘），有变化落盘并提示；手动更新则重新拉取清单 |
 
 ## 已知限制
 
-- 公共源随时失效，属 IPTV 固有属性；App 内一键更新源可重新拉取可用列表
+- 源依赖 akira 上游，上游频道失效属 IPTV 固有属性；App 内「更新播放源」可重新拉取最新清单
 - 合规：源均为公开网络收集，个人自用，不得商用或对外分发源列表

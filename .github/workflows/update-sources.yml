@@ -4,8 +4,10 @@ name: update-sources
 # 注：这是本仓库自己的 Actions，不是 fork，无上游 fork 调度限制。
 
 on:
-  schedule:
-    - cron: "17 1 * * *"   # 每天 09:17 北京时间（避开整点高峰，jitter 已含）
+  # 已停用定时任务：源统一为 akira 单一源（2026-11-24），公共源聚合池不再维护。
+  # scripts/update-sources.sh 入口已改为直接退出，此工作流保留仅供历史参考。
+  # schedule:
+  #   - cron: "17 1 * * *"   # 原：每天 09:17 北京时间
   workflow_dispatch:
 
 permissions:
