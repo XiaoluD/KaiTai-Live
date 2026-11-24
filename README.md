@@ -2,7 +2,7 @@
 
 内置 libmpv 播放内核的网络电视直播客户端（macOS / Windows）。点开频道就出画面，无广告、无依赖、关窗即释放资源。
 
-**下载**：[GitHub Releases · latest](https://github.com/XiaoluD/kaitai/releases/latest)
+**下载**：[GitHub Releases · latest](https://github.com/XiaoluD/KaiTai-Live/releases/latest)
 
 | 平台 | 文件 | 大小 |
 |---|---|---|
@@ -18,7 +18,7 @@
 - **源自动同步**：服务端精选清单（已在服务端逐条抓帧验台标）更新后，App 启动静默比对并落盘，无需重新打包
 - **一键更新源**：手动重新拉取公共源并用 `<video>` 实测筛选，只留点开就能播的线路
 - **画质台标**：CCTV 系列用高清台标图床，自动适配深浅色主题
-- **播放器交互**：点击画面暂停/播放（中央状态徽标）、全屏、音量、快捷键齐全
+- **播放器交互**：点击画面暂停/播放（中央状态徽标）、**点音量图标一键静音**（再点恢复静音前的实际音量）、全屏、快捷键齐全
 - **原生菜单栏**：复制/打开当前频道直链、更新播放源、检查更新（支持应用内自动更新）
 - **双击标题栏**：最大化 / 窗口化切换；标题栏整体融入界面
 
@@ -35,6 +35,8 @@
 
 菜单栏快捷键：设置 `⌘,`、检查更新 `⌘U`、更新播放源 `⇧⌘U`、复制直链 `⇧⌘C`、浏览器打开 `⇧⌘O`。
 
+音量图标本身就是静音开关：点一次静音（图标转橙色叉号、滑块归零），再点恢复**静音前的实际音量**（不是固定回到 100）。图标可用 Tab 聚焦，聚焦后 `Enter` / `空格` 同效，且不会误触空格暂停。
+
 ## 构建
 
 ```bash
@@ -44,6 +46,12 @@ APP_VERSION=1.0.10 ./mac-app/build.sh  # 指定版本号
 ```
 
 libmpv 位置由 `MPV_PREFIX` 变量控制（默认 `~/.kaitai/mpv`），换库不用改源码。
+
+> **本地构建后前端不生效？** App 启动时优先加载 `~/Library/Application Support/IPTVWeb/` 下的前端文件（只要该目录存在 `index.html`），打包进 App 的新前端会被忽略。改完 `web/` 后需同步过去——`sources.json` 和 `playlists/` 是你的源配置与频道列表，别一起覆盖：
+>
+> ```bash
+> cp web/{index.html,app.js,styles.css,manifest.json} ~/Library/Application\ Support/IPTVWeb/
+> ```
 
 ## 打包与发布
 
