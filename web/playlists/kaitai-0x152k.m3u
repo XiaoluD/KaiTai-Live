@@ -7,16 +7,28 @@ https://iptv.wusi321.top/akira/relay/ysp-cctv2.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-cctv3.m3u8
 #EXTINF:-1 tvg-id="CCTV4中文国际" tvg-name="CCTV4中文国际" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV4%E4%B8%AD%E6%96%87%E5%9B%BD%E9%99%85.png?v=c4eac3d6a7" catchup="none" group-title="央视",CCTV4中文国际
 https://iptv.wusi321.top/akira/relay/ysp-cctv4.m3u8
+#EXTINF:-1 tvg-id="CCTV5体育" tvg-name="CCTV5体育" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV5%E4%BD%93%E8%82%B2.png?v=e4a833e047" catchup="none" group-title="央视",CCTV5体育
+https://iptv.wusi321.top/akira/relay/ysp-cctv5.m3u8
+#EXTINF:-1 tvg-id="CCTV5+体育赛事" tvg-name="CCTV5+体育赛事" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV5%2B%E4%BD%93%E8%82%B2%E8%B5%9B%E4%BA%8B.png?v=2674d0e247" catchup="none" group-title="央视",CCTV5+体育赛事
+https://iptv.wusi321.top/akira/relay/ysp-cctv5p.m3u8
 #EXTINF:-1 tvg-id="CCTV6电影" tvg-name="CCTV6电影" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV6%E7%94%B5%E5%BD%B1.png?v=ae4d67aaeb" catchup="none" group-title="央视",CCTV6电影
 https://iptv.wusi321.top/akira/relay/ysp-cctv6.m3u8
 #EXTINF:-1 tvg-id="CCTV7国防军事" tvg-name="CCTV7国防军事" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV7%E5%9B%BD%E9%98%B2%E5%86%9B%E4%BA%8B.png?v=577e754a49" catchup="none" group-title="央视",CCTV7国防军事
 https://iptv.wusi321.top/akira/relay/ysp-cctv7.m3u8
 #EXTINF:-1 tvg-id="CCTV8电视剧" tvg-name="CCTV8电视剧" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV8%E7%94%B5%E8%A7%86%E5%89%A7.png?v=4d109bb569" catchup="none" group-title="央视",CCTV8电视剧
 https://iptv.wusi321.top/akira/relay/ysp-cctv8.m3u8
+#EXTINF:-1 tvg-id="CCTV9纪录" tvg-name="CCTV9纪录" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV9%E7%BA%AA%E5%BD%95.png?v=b81956f393" catchup="none" group-title="央视",CCTV9纪录
+https://iptv.wusi321.top/akira/relay/ysp-cctv9.m3u8
+#EXTINF:-1 tvg-id="CCTV10科教" tvg-name="CCTV10科教" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV10%E7%A7%91%E6%95%99.png?v=a68dc27343" catchup="none" group-title="央视",CCTV10科教
+https://iptv.wusi321.top/akira/relay/ysp-cctv10.m3u8
+#EXTINF:-1 tvg-id="CCTV11戏曲" tvg-name="CCTV11戏曲" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV11%E6%88%8F%E6%9B%B2.png?v=4feb0f2d55" catchup="none" group-title="央视",CCTV11戏曲
+https://iptv.wusi321.top/akira/relay/ysp-cctv11.m3u8
 #EXTINF:-1 tvg-id="CCTV12社会与法" tvg-name="CCTV12社会与法" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV12%E7%A4%BE%E4%BC%9A%E4%B8%8E%E6%B3%95.png?v=84f6431425" catchup="none" group-title="央视",CCTV12社会与法
 https://iptv.wusi321.top/akira/relay/ysp-cctv12.m3u8
 #EXTINF:-1 tvg-id="CCTV13新闻" tvg-name="CCTV13新闻" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV13%E6%96%B0%E9%97%BB.png?v=a7a294cc3f" catchup="none" group-title="央视",CCTV13新闻
 https://iptv.wusi321.top/akira/relay/ysp-cctv13.m3u8
+#EXTINF:-1 tvg-id="CCTV14少儿" tvg-name="CCTV14少儿" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV14%E5%B0%91%E5%84%BF.png?v=8acc074b74" catchup="none" group-title="央视",CCTV14少儿
+https://iptv.wusi321.top/akira/relay/ysp-cctv14.m3u8
 #EXTINF:-1 tvg-id="CCTV15音乐" tvg-name="CCTV15音乐" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV15%E9%9F%B3%E4%B9%90.png?v=a59322eb53" catchup="none" group-title="央视",CCTV15音乐
 https://iptv.wusi321.top/akira/relay/ysp-cctv15.m3u8
 #EXTINF:-1 tvg-id="CCTV16奥林匹克" tvg-name="CCTV16奥林匹克" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV16%E5%A5%A5%E6%9E%97%E5%8C%B9%E5%85%8B.png?v=506e6e8ae8" catchup="none" group-title="央视",CCTV16奥林匹克
@@ -45,6 +57,10 @@ https://iptv.wusi321.top/akira/relay/ysp-vip-cctvsjdl.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvfyyl.m3u8
 #EXTINF:-1 tvg-id="CCTV兵器科技" tvg-name="CCTV兵器科技" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E5%85%B5%E5%99%A8%E7%A7%91%E6%8A%80.png?v=906052a495" catchup="none" group-title="央视",CCTV兵器科技
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvbqkj.m3u8
+#EXTINF:-1 tvg-id="CCTV风云足球" tvg-name="CCTV风云足球" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E9%A3%8E%E4%BA%91%E8%B6%B3%E7%90%83.png?v=b6f65e1699" catchup="none" group-title="央视",CCTV风云足球
+https://iptv.wusi321.top/akira/relay/ysp-vip-cctvfyzq.m3u8
+#EXTINF:-1 tvg-id="CCTV高尔夫·网球" tvg-name="CCTV高尔夫·网球" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E9%AB%98%E5%B0%94%E5%A4%AB%C2%B7%E7%BD%91%E7%90%83.png?v=e14b96952c" catchup="none" group-title="央视",CCTV高尔夫·网球
+https://iptv.wusi321.top/akira/relay/ysp-vip-cctvgfew.m3u8
 #EXTINF:-1 tvg-id="CCTV女性时尚" tvg-name="CCTV女性时尚" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E5%A5%B3%E6%80%A7%E6%97%B6%E5%B0%9A.png?v=0fb9425f0f" catchup="none" group-title="央视",CCTV女性时尚
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvnxss.m3u8
 #EXTINF:-1 tvg-id="CCTV央视文化精品" tvg-name="CCTV央视文化精品" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E5%A4%AE%E8%A7%86%E6%96%87%E5%8C%96%E7%B2%BE%E5%93%81.png?v=0496290b9c" catchup="none" group-title="央视",CCTV央视文化精品
@@ -835,8 +851,6 @@ rtmp://f13h.mine.nu/sat/tv771
 rtmp://f13h.mine.nu/sat/tv701
 #EXTINF:-1 tvg-id="佳士得香港 瑰丽珠宝及翡翠首饰" tvg-name="佳士得香港 瑰丽珠宝及翡翠首饰" tvg-logo="" catchup="none" group-title="港澳台",佳士得香港 瑰丽珠宝及翡翠首饰
 https://iptv.wusi321.top/akira/proxy/beijing-live-6-577fp2immta9b0qckuveu3ks1jg.m3u8
-#EXTINF:-1 tvg-id="CCTV14少儿" tvg-name="CCTV14少儿" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV14%E5%B0%91%E5%84%BF.png?v=8acc074b74" catchup="none" group-title="少儿",CCTV14少儿
-https://iptv.wusi321.top/akira/relay/ysp-cctv14.m3u8
 #EXTINF:-1 tvg-id="成都少儿" tvg-name="成都少儿" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/45983406ba055850bbaa.png?v=1795504098280&from=source" catchup="none" group-title="少儿",成都少儿
 https://iptv.wusi321.top/akira/chengdu-cdtv6
 #EXTINF:-1 tvg-id="甘肃少儿" tvg-name="甘肃少儿" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/c956889007383ad8866e.png?v=1795504098280&from=source" catchup="none" group-title="少儿",甘肃少儿
@@ -911,14 +925,6 @@ https://iptv.wusi321.top/akira/relay/xjtv-8.m3u8
 https://iptv.wusi321.top/akira/proxy/kankanews-9.m3u8
 #EXTINF:-1 tvg-id="金鹰卡通" tvg-name="金鹰卡通" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/4951bad78718aa688cdd.jpg?v=1795504098280&from=source" catchup="none" group-title="少儿",金鹰卡通
 https://iptv.wusi321.top/akira/proxy/mgtv-287.m3u8
-#EXTINF:-1 tvg-id="CCTV5体育" tvg-name="CCTV5体育" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV5%E4%BD%93%E8%82%B2.png?v=e4a833e047" catchup="none" group-title="体育",CCTV5体育
-https://iptv.wusi321.top/akira/relay/ysp-cctv5.m3u8
-#EXTINF:-1 tvg-id="CCTV5+体育赛事" tvg-name="CCTV5+体育赛事" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV5%2B%E4%BD%93%E8%82%B2%E8%B5%9B%E4%BA%8B.png?v=2674d0e247" catchup="none" group-title="体育",CCTV5+体育赛事
-https://iptv.wusi321.top/akira/relay/ysp-cctv5p.m3u8
-#EXTINF:-1 tvg-id="CCTV风云足球" tvg-name="CCTV风云足球" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E9%A3%8E%E4%BA%91%E8%B6%B3%E7%90%83.png?v=b6f65e1699" catchup="none" group-title="体育",CCTV风云足球
-https://iptv.wusi321.top/akira/relay/ysp-vip-cctvfyzq.m3u8
-#EXTINF:-1 tvg-id="CCTV高尔夫·网球" tvg-name="CCTV高尔夫·网球" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E9%AB%98%E5%B0%94%E5%A4%AB%C2%B7%E7%BD%91%E7%90%83.png?v=e14b96952c" catchup="none" group-title="体育",CCTV高尔夫·网球
-https://iptv.wusi321.top/akira/relay/ysp-vip-cctvgfew.m3u8
 #EXTINF:-1 tvg-id="纬来体育" tvg-name="纬来体育" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E7%BA%AC%E6%9D%A5%E4%BD%93%E8%82%B2.png?v=a938e616dd" group-title="体育",纬来体育
 https://hlsz.yjjcfw.com/live/vl.m3u8?expire=1786948372&sign=2e4a56b89fe644db147552011f972714
 #EXTINF:-1 tvg-id="安徽综艺体育" tvg-name="安徽综艺体育" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/ca26ab53a4d70b7b7aa1.png?v=1795504098280&from=source" catchup="none" group-title="体育",安徽综艺体育
@@ -1133,8 +1139,6 @@ https://iptv.wusi321.top/akira/proxy/livechina-hsptgy.m3u8
 https://iptv.wusi321.top/akira/proxy/livechina-drs01.m3u8
 #EXTINF:-1 tvg-id="陕西｜西安钟楼" tvg-name="陕西｜西安钟楼" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/65d8039db9f27f744e0e.jpg?v=1795504098280&from=source" catchup="none" group-title="央视景观",陕西｜西安钟楼
 https://iptv.wusi321.top/akira/proxy/livechina-blg03.m3u8
-#EXTINF:-1 tvg-id="CCTV10科教" tvg-name="CCTV10科教" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV10%E7%A7%91%E6%95%99.png?v=a68dc27343" catchup="none" group-title="教育",CCTV10科教
-https://iptv.wusi321.top/akira/relay/ysp-cctv10.m3u8
 #EXTINF:-1 tvg-id="湖北教育" tvg-name="湖北教育" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/86197821e3ee2fa09c32.png?v=1795504098280&from=source" catchup="none" group-title="教育",湖北教育
 https://iptv.wusi321.top/akira/proxy/hbtv-437.m3u8
 #EXTINF:-1 tvg-id="安徽农业科教" tvg-name="安徽农业科教" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/317ffc32a80441365c31.png?v=1795504098280&from=source" catchup="none" group-title="教育",安徽农业科教
@@ -1181,10 +1185,6 @@ https://nklive.nbs.cn/hls/18f88094-0532-427e-8933-e29a481942a0/index.m3u8
 https://iptv.wusi321.top/akira/proxy/qingdao-5.m3u8
 #EXTINF:-1 tvg-id="天津教育" tvg-name="天津教育" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/85bde19fc110ec138a4a.png?v=1795504098280&from=source" catchup="none" group-title="教育",天津教育
 https://iptv.wusi321.top/akira/proxy/tianjin-education.m3u8
-#EXTINF:-1 tvg-id="CCTV9纪录" tvg-name="CCTV9纪录" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV9%E7%BA%AA%E5%BD%95.png?v=b81956f393" catchup="none" group-title="文旅",CCTV9纪录
-https://iptv.wusi321.top/akira/relay/ysp-cctv9.m3u8
-#EXTINF:-1 tvg-id="CCTV11戏曲" tvg-name="CCTV11戏曲" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV11%E6%88%8F%E6%9B%B2.png?v=4feb0f2d55" catchup="none" group-title="文旅",CCTV11戏曲
-https://iptv.wusi321.top/akira/relay/ysp-cctv11.m3u8
 #EXTINF:-1 tvg-id="陕西｜阎良关山石川河风景区" tvg-name="陕西｜阎良关山石川河风景区" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/4254c18a1297f5cbd5d5.jpg?v=1795504098280&from=source" catchup="none" group-title="文旅",陕西｜阎良关山石川河风景区
 https://iptv.wusi321.top/akira/proxy/livechina-nss01.m3u8
 #EXTINF:-1 tvg-id="China Travel" tvg-name="China Travel" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/China%20Travel.png?v=cce29585c0" group-title="文旅",China Travel
