@@ -1,14 +1,16 @@
 {
-  "updated": "2026-11-20",
-  "note": "页面按 type 区分：public=公共源（别人维护），self=自建（本机跑 iptv-api 产出）。sources 数组顺序就是界面按钮顺序。带 url 的源支持 App 内「更新源」一键重新拉取；没 url 的（本地生成）会被跳过。removed:true 的条目只留档不显示。",
+  "updated": "2026-11-24",
+  "note": "页面按 type 区分：public=公共源（别人维护），self=自建（服务端已逐条实测的精选清单）。sources 数组顺序就是界面按钮顺序。带 url 的源支持「更新源」一键重新拉取；sync:true 的源还会在 App 启动时静默比对同步；trusted:true 表示服务端已验过，更新时跳过客户端 <video> 实测（避免误杀组播源）。removed:true 的条目只留档不显示。",
   "sources": [
     {
       "id": "self-iptv-api",
       "name": "默认",
       "type": "self",
       "file": "playlists/self-iptv-api.m3u",
-      "local": true,
-      "note": "本机跑 iptv-api 生成 | 229 候选 → 31 条实测可用 → 剔除 3 条假链 → 补 CCTV-4/7/11/14/15（longlong 咪咕源，同 authCode）→ 33 条 / 29 个台 | CCTV-4/11/15 为 576p；CCTV-7/15 未过画面复核（黑帧）| 每条过 720p + 0.5MB/s + 广告过滤 + FFmpeg 解码 | 产物在本地，不支持 App 内更新"
+      "url": "https://iptv.wusi321.top/playlists/self-iptv-api.m3u",
+      "sync": true,
+      "trusted": true,
+      "note": "服务端精选清单（逐条 ffmpeg 抓帧验台标）| 37 条：CCTV-1..17 + CGTN + 卫视 | 含 CCTV-5 / CCTV-5+ / CCTV-6（山东移动组播 223.78.65.165:9901，1080p，key=txiptv）| App 启动自动同步 + 更新源可拉，不再依赖重新打包"
     },
     {
       "id": "public-zbds",

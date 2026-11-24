@@ -622,6 +622,9 @@ async function initApp() {
   renderView();
   const restored = await restoreLastChannel();
   if (!restored && settings.view !== 'channels' && first) selectSource(first);
+
+  // 启动后用空闲时间静默同步服务端精选源（延迟 300ms 不拖慢首屏；失败静默）
+  if (nativeBridge) setTimeout(() => { syncTrustedSources().catch(() => {}); }, 300);
 }
 
 /* 按设置里的视图渲染侧边栏（播放源视图 / 频道视图） */
@@ -830,7 +833,9 @@ async function restoreLastChannel() {
  */
 function setupUpdateButton() {
   const st = $('updStatus');
-  const remote = state.sources.filter((s) => s.url && !s.local);
+  // 自建源现在也带 url（服务端精选清单），一并纳入更新范围——原先按 local 排除，
+  // 导致「服务端补了 CCTV-5/6，App 里永远看不到」，这是 11-24 那次事故的根因
+  const remote = state.sources.filter((s) => s.url);
 
   const run = async (ev) => {
     const btnEl = ev && ev.currentTarget;
@@ -878,16 +883,94 @@ async function runUpdate(remote, st) {
       continue;
     }
 
-    const kept = await probeChannels(channels, (done, total) => {
-      st.textContent =
-        '正在实测 ' + src.name + '：' + done + '/' + total + '（点开就能播的才留下）';
-    });
+    // trusted 源（服务端已逐条抓帧验过）直接采用原文，跳过客户端实测：
+    // 组播 http 源在 WebKit 里首帧慢，7 秒超时会误杀好链路
+    let m3u = raw;
+    if (!src.trusted) {
+      const kept = await probeChannels(channels, (done, total) => {
+        st.textContent =
+          '正在实测 ' + src.name + '：' + done + '/' + total + '（点开就能播的才留下）';
+      });
+      m3u = buildM3U(kept, src.name);
+      parts.push(src.name + ' ' + channels.length + ' → ' + kept.length + ' 条');
+    } else {
+      parts.push(src.name + ' ' + channels.length + ' 条（服务端已验，跳过实测）');
+    }
 
-    const m3u = buildM3U(kept, src.name);
     await nativeBridge.postMessage({ action: 'save', file: src.file, content: m3u });
-    parts.push(src.name + ' ' + channels.length + ' → ' + kept.length + ' 条');
   }
   st.textContent = parts.join('｜');
+}
+
+/* ---------- 启动静默同步：服务端精选源（self）----------
+ *
+ * 背景（2026-11-24）：服务端补了 CCTV-5/5+/6，但 App 内置清单是打包快照，
+ * 用户在 App 里点「更新源」也拉不到自建源（当时没有 url、被 local 过滤掉），
+ * 结果「源更新了，界面看不到」。现在自建源带 url + sync，启动时静默比对
+ * 服务端清单，内容不一致就落盘重绘，不再依赖重新打包。
+ */
+async function syncTrustedSources() {
+  if (!nativeBridge) return false;
+  const targets = state.sources.filter((s) => s.sync && s.url && s.trusted);
+  if (!targets.length) return false;
+
+  let changed = 0;
+  let lastCount = 0;
+  let lastName = '';
+  for (const src of targets) {
+    try {
+      const cur = await fetch('./' + src.file, { cache: 'no-store' })
+        .then((r) => (r.ok ? r.text() : ''))
+        .catch(() => '');
+      const dl = await nativeBridge.postMessage({ action: 'download', urls: [src.url] });
+      const raw = dl && dl.texts && dl.texts[src.url];
+      if (!raw) continue;
+      if (samePlaylist(cur, raw)) continue;
+      await nativeBridge.postMessage({ action: 'save', file: src.file, content: raw });
+      changed += 1;
+      lastCount = parseM3U(raw).length;
+      lastName = src.name;
+    } catch (e) {
+      /* 静默失败：没网/服务端异常都不能影响启动 */
+    }
+  }
+  if (!changed) return false;
+
+  toast(lastName + '源已同步最新清单：' + lastCount + ' 条');
+  aggLoaded = false;
+  if (settings.view === 'channels') {
+    await loadAllSources();
+    renderGroups();
+    renderList();
+  } else if (state.activeSource && targets.some((s) => s.id === state.activeSource.id)) {
+    selectSource(state.activeSource);
+  }
+  return true;
+}
+
+/* 两份 m3u 的「频道集合」是否一致（忽略注释行、顺序、时间戳） */
+function samePlaylist(a, b) {
+  const key = (text) =>
+    parseM3U(text)
+      .map((c) => c.name + '|' + c.url)
+      .sort()
+      .join('\n');
+  return key(a) === key(b);
+}
+
+/* 轻提示：右下角浮出，4 秒淡出 */
+function toast(text) {
+  let el = document.getElementById('toast');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'toast';
+    el.className = 'toast';
+    document.body.appendChild(el);
+  }
+  el.textContent = text;
+  el.classList.add('on');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => el.classList.remove('on'), 4000);
 }
 
 /* ---------- 网页/PWA 的更新源：无原生桥，fetch + <video> 实测 + 存 localStorage ---------- */
@@ -921,12 +1004,17 @@ async function runUpdateWeb(remote, st) {
       continue;
     }
 
-    const kept = await probeChannels(channels, (done, total) => {
-      st.textContent =
-        '正在实测 ' + src.name + '：' + done + '/' + total + '（点开就能播的才留下）';
-    });
-
-    overrides[src.id] = buildM3U(kept, src.name);
+    if (src.trusted) {
+      overrides[src.id] = raw;
+      parts.push(src.name + ' ' + channels.length + ' 条（服务端已验，跳过实测）');
+    } else {
+      const kept = await probeChannels(channels, (done, total) => {
+        st.textContent =
+          '正在实测 ' + src.name + '：' + done + '/' + total + '（点开就能播的才留下）';
+      });
+      overrides[src.id] = buildM3U(kept, src.name);
+      parts.push(src.name + ' ' + channels.length + ' → ' + kept.length + ' 条');
+    }
     try {
       localStorage.setItem(PLAYLIST_OVERRIDES_KEY, JSON.stringify(overrides));
     } catch (e) {

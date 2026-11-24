@@ -871,3 +871,24 @@ body.ios .volwrap { display: none; }
   50% { transform: translateX(8px); }
   75% { transform: translateX(-5px); }
 }
+
+/* ---------- 轻提示 toast（源同步结果等） ---------- */
+.toast {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 90;
+  max-width: min(420px, 72vw);
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(24, 26, 32, 0.94);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.5;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  opacity: 0;
+  transform: translateY(8px);
+  transition: opacity .2s ease, transform .2s ease;
+  pointer-events: none;
+}
+.toast.on { opacity: 1; transform: translateY(0); }
