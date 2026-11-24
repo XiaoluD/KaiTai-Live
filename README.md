@@ -41,9 +41,11 @@
 
 ```bash
 brew install mpv dylibbundler          # libmpv 内核 + 依赖收拢工具
-./mac-app/build.sh                     # 产出 mac-app/build/开台直播.app
-APP_VERSION=1.0.10 ./mac-app/build.sh  # 指定版本号
+./mac-app/build.sh                     # 产出 mac-app/build/开台直播.app（版本号自动取最近 v* tag）
+APP_VERSION=1.0.12 ./mac-app/build.sh  # 手工指定版本号
 ```
+
+版本号不写时按 `git describe --tags --abbrev=0 --match 'v*'` 取最近 tag，保证本地构建与线上同版本——自更新只比较版本大小，版本错位会导致检查更新误判。
 
 libmpv 位置由 `MPV_PREFIX` 变量控制（默认 `~/.kaitai/mpv`），换库不用改源码。
 

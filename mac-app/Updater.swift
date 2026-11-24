@@ -75,7 +75,7 @@ enum AppUpdate {
 
     /// 发布仓库；build.sh 会在 Info.plist 里写 GitHubRepo，这里读它，读不到用默认
     static var repo: String {
-        (Bundle.main.infoDictionary?["GitHubRepo"] as? String) ?? "XiaoluD/kaitai"
+        (Bundle.main.infoDictionary?["GitHubRepo"] as? String) ?? "XiaoluD/KaiTai-Live"
     }
 
     static var currentVersion: String {
@@ -123,8 +123,10 @@ enum AppUpdate {
             tag = t
         }
 
-        // 与本地同版本视为无更新（比较标准化后的三段数字）
-        guard normalized(tag) != normalized(currentVersion) else { return nil }
+        // 只有远端版本「更高」才算更新。
+        // 旧实现用字符串 != 判断：本地自构建版本与线上不一致就提示更新，
+        // 本地版本更高时还会被降级覆盖（2026-11-24 前用「本地版本号手工对齐线上」规避）。
+        guard isNewer(tag, than: currentVersion) else { return nil }
 
         // 资产名固定 ASCII（GitHub 上传中文资产名会丢前缀，v1.0.2 实测踩坑）
         let zipURL = "https://github.com/\(repo)/releases/download/\(tag)/kaitai-\(variant)-arm64.zip"
@@ -205,9 +207,22 @@ enum AppUpdate {
         exit(0)
     }
 
-    private static func normalized(_ v: String) -> String {
-        let parts = v.lowercased().hasPrefix("v")
-            ? v.dropFirst() : v[...]
-        return parts.split(separator: ".").map { $0.filter(\.isNumber) }.joined(separator: ".")
+    /// 远端版本是否严格高于本地：按数字段逐位比较，缺位补 0。
+    /// 例：1.0.10 > 1.0.9，1.0.10 == 1.0.10，1.0.10 < 1.1。
+    /// 非数字段（-beta、_rc1）不参与比较，按 0 处理。
+    static func isNewer(_ remote: String, than local: String) -> Bool {
+        let a = versionSegments(remote)
+        let b = versionSegments(local)
+        for i in 0..<max(a.count, b.count) {
+            let x = i < a.count ? a[i] : 0
+            let y = i < b.count ? b[i] : 0
+            if x != y { return x > y }
+        }
+        return false
+    }
+
+    private static func versionSegments(_ v: String) -> [Int] {
+        let core = v.lowercased().hasPrefix("v") ? v.dropFirst() : v[...]
+        return core.split(separator: ".").map { Int($0.prefix(while: { $0.isNumber })) ?? 0 }
     }
 }

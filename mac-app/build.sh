@@ -11,7 +11,13 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ROOT="$(cd "$HERE/.." && pwd)"
 VARIANT="${VARIANT:-embedded}"
 ARCH="$(uname -m)"
-APP_VERSION="${APP_VERSION:-1.0.0}"
+APP_VERSION="${APP_VERSION:-}"
+# 版本号默认取最近的 v* tag，保证本地构建与线上同一版本（自更新只比较大小，
+# 版本对不上会导致检查更新误判、旧逻辑甚至会降级覆盖）。无 tag 时退回 1.0.0。
+if [ -z "$APP_VERSION" ]; then
+  APP_VERSION="$(git -C "$ROOT" describe --tags --abbrev=0 --match 'v*' 2>/dev/null | sed 's/^v//' || true)"
+  APP_VERSION="${APP_VERSION:-1.0.0}"
+fi
 
 case "$VARIANT" in
   lite)
@@ -184,7 +190,7 @@ cat > "$CONTENTS/Info.plist" <<PLIST
 	<key>CFBundleVersion</key>
 	<string>1</string>
 	<key>GitHubRepo</key>
-	<string>XiaoluD/kaitai</string>
+	<string>XiaoluD/KaiTai-Live</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSHighResolutionCapable</key>
