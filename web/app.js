@@ -613,10 +613,13 @@ async function initApp() {
   setupAppUpdate();
 
   // 「检查更新」只在 App 内出现（网页版没有原生桥）
+  // 设置面板绑定与原生桥解耦：桥没识别到（或网页/PWA）时设置也必须能打开
+  // （原先只包在 if (nativeBridge) 里，桥检测失败 → 点齿轮毫无反应）
+  bindSettingsUI();
+  applySettings();
+
   if (nativeBridge) {
     $('checkupd').hidden = false;
-    bindSettingsUI();
-    applySettings();
     if (settings.autoCheck) {
       setTimeout(() => { const b=$('checkupd'); if (b._check) b._check({ silent: true }); }, 8000);
     }
@@ -745,7 +748,22 @@ function bindSettingsUI() {
     if (e.target === $('settingsScrim')) $('settingsScrim').hidden = true;
   });
 
-  const seg = (id, key) => {
+  // 兜底：捕获阶段再挂一次——即使上面某个处理器抛错或别处 stopPropagation，
+  // 点齿轮、点关闭、点遮罩依然有效（避免「设置弹不出来」再次发生）
+  if (!window.__settingsFallback) {
+    window.__settingsFallback = true;
+    document.addEventListener('click', (e) => {
+      const t = e.target && e.target.closest ? e.target.closest('#settingsBtn, #settingsClose') : null;
+      const sc = $('settingsScrim');
+      if (!sc) return;
+      if (t) { sc.hidden = t.id === 'settingsClose'; return; }
+      if (e.target === sc) sc.hidden = true;
+    }, true);
+  }
+
+  // 以下是设置项绑定：任何一项缺元素都不该拖垮面板本身
+  try {
+    const seg = (id, key) => {
     const box = $(id);
     const sync = () => box.querySelectorAll('button').forEach((b) =>
       b.classList.toggle('on', b.dataset.v === settings[key]));
@@ -793,6 +811,7 @@ function bindSettingsUI() {
 
   // 无内嵌内核时隐藏播放设置（网页版不涉及 mpv）
   if (!hasEmbeddedPlayer) $('setPlaySection').hidden = true;
+  } catch (e) { console.warn('设置项绑定部分失败：', e); }
 }
 
 /* 恢复上次频道：记住 源 + 频道URL，启动后静默重放 */
