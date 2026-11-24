@@ -9,7 +9,7 @@
     <AssemblyName>KaiTai</AssemblyName>
     <AssemblyTitle>开台直播</AssemblyTitle>
     <Product>开台直播 · 网络电视</Product>
-    <Version>1.0.10</Version>
+    <Version>1.0.11</Version>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <SelfContained>true</SelfContained>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>

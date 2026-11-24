@@ -49,11 +49,7 @@ APP_VERSION=1.0.12 ./mac-app/build.sh  # 手工指定版本号
 
 libmpv 位置由 `MPV_PREFIX` 变量控制（默认 `~/.kaitai/mpv`），换库不用改源码。
 
-> **本地构建后前端不生效？** App 启动时优先加载 `~/Library/Application Support/IPTVWeb/` 下的前端文件（只要该目录存在 `index.html`），打包进 App 的新前端会被忽略。改完 `web/` 后需同步过去——`sources.json` 和 `playlists/` 是你的源配置与频道列表，别一起覆盖：
->
-> ```bash
-> cp web/{index.html,app.js,styles.css,manifest.json} ~/Library/Application\ Support/IPTVWeb/
-> ```
+> **前端页面从哪加载？** 一律用 App 包内的 `web/`——前端与二进制同版本发布，装完即生效，不需要任何手工拷贝。`~/Library/Application Support/IPTVWeb/` 只承担用户数据职责：`playlists/` 作为 overlay 覆盖包内清单（App 内「更新播放源」下载的新清单写在这里），`sources.json` 为同内容留档。
 
 ## 打包与发布
 

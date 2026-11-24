@@ -785,14 +785,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         webView?.reload()
     }
 
-    /// 优先用外部可写目录（便于 sync 脚本更新列表），否则用 app 内置副本
+    /// 前端页面一律用 app 包内副本：包内前端与二进制同版本发布，装完即生效。
+    ///
+    /// 历史坑（2026-11-24 修）：旧实现优先用 `~/Library/Application Support/IPTVWeb/`
+    /// 下的 index.html，只要该文件存在就完全忽略包内前端。结果是——用户重装新版 App
+    /// 后界面仍是旧页面（音量键点了没反应，连查三次才定位），每次改前端还得手工 cp 一次，
+    /// 漏一次就静默失效且无任何报错。
+    /// 现在那个目录只承担「用户数据」职责：`playlists/` 作为 overlay（见 StaticServer）。
     private static func contentRoot() -> URL {
         let fm = FileManager.default
-        let external = fm.homeDirectoryForCurrentUser
-            .appendingPathComponent("Library/Application Support/IPTVWeb", isDirectory: true)
-        if fm.fileExists(atPath: external.appendingPathComponent("index.html").path) {
-            return external
-        }
         if let res = Bundle.main.resourceURL?.appendingPathComponent("web", isDirectory: true),
            fm.fileExists(atPath: res.appendingPathComponent("index.html").path) {
             return res
