@@ -10,7 +10,7 @@ const state = {
   activeGroup: '',
   // 频道视图：跨源聚合 + 五大类
   aggregated: [],
-  activeCat: '央视频道', // 进入程序默认打开央视频道
+  activeCat: '央视频', // 进入程序默认打开央视（akira 内部分组名）
   current: null,
   hls: null,
   timer: null
@@ -18,7 +18,7 @@ const state = {
 
 let aggLoaded = false;
 
-const CATS = ['央视频道', '卫视频道', '港澳台', '其他'];
+const CATS = ['央视', '卫视', '地方台', '港澳台', '少儿', '体育', '国际', '央视景观', '教育', '文旅', '其他'];
 
 /* 卫视热度榜：收视率与覆盖综合排序，榜内靠前；未上榜的走自然序兜底 */
 const HOT_SATV = ['湖南', '东方', '浙江', '江苏', '北京', '广东', '深圳', '山东',
@@ -32,13 +32,20 @@ function satvRank(name) {
   return i === -1 ? 999 : i;
 }
 
-/* 频道视图的分类规则（按频道名判断，与源自带的 group-title 无关）。
+/* 频道视图的分类规则：优先用清单自带的 group-title（akira 源已按 11 类分好），
+ * 名称规则只做兜底（其他源/无分组时按名判断）。
  * 「电影频道」分类已按需求移除：CCTV-6 归入央视，电影/影院/CHC 等落入其他 */
-function classifyChannel(name) {
+function classifyChannel(name, group) {
+  const g = String(group || '').trim();
+  if (CATS.includes(g)) return g;
   const n = String(name || '').toUpperCase();
   if (/港澳|台湾|香港|澳门|凤凰|TVB|翡翠|明珠|本港|国际台|TVBS|三立|民视|中天|中视|华视|台视|东森|八大|RTHK|HOY|澳视|莲花|ASTRO|八大|纬来|龙华|靖天|龙祥|寰宇|AXN|HBO ASIA/.test(n)) return '港澳台';
-  if (/卫视/.test(n)) return '卫视频道';
-  if (/CCTV|CGTN|央视频道|央视|中央教育|CETV/.test(n)) return '央视频道';
+  if (/卫视/.test(n)) return '卫视';
+  if (/CCTV|CGTN|央视|中央教育|CETV/.test(n)) return '央视';
+  if (/少儿|卡通|动画|炫动|亲子|幼儿/.test(n)) return '少儿';
+  if (/体育|赛事|垂钓|足球|篮球|网球/.test(n)) return '体育';
+  if (/教育|科教/.test(n)) return '教育';
+  if (/纪实|纪录|戏曲|风景|文旅|慢直播|景观/.test(n)) return '文旅';
   return '其他';
 }
 
@@ -94,7 +101,7 @@ async function loadAllSources() {
       if (!map.has(key)) {
         map.set(key, {
           name: stripQual(ch.name), logo: '', fallbackLogo: '',
-          cat: classifyChannel(ch.name), items: []
+          cat: (ch.group || '').trim() || classifyChannel(ch.name, ch.group), items: []
         });
       }
       const agg = map.get(key);
@@ -113,15 +120,16 @@ async function loadAllSources() {
     }
   }
 
-  // 排序：分类分块 → 央视主台按数字序、衍生频道（4K/欧洲/美洲/5+ 等）统一靠后 → 卫视按热度榜 → 其余自然序
+  // 排序：按清单原生分组出现顺序（跟随 akira 内部分组，不重写）→ 央视主台按数字序 → 卫视按热度榜 → 其余自然序
+  const groupOrder = [...new Set(state.aggregated.map((a) => a.cat))];
   state.aggregated.sort((a, b) => {
-    const ca = CATS.indexOf(a.cat), cb = CATS.indexOf(b.cat);
+    const ca = groupOrder.indexOf(a.cat), cb = groupOrder.indexOf(b.cat);
     if (ca !== cb) return ca - cb;
-    if (a.cat === '央视频道') {
+    if (a.cat === '央视频') {
       const ra = cctvMainRank(a.name), rb = cctvMainRank(b.name);
       if (ra !== rb) return ra - rb;   // 主台 1..99 < 衍生 1000+；衍生组内走自然序
     }
-    if (a.cat === '卫视频道') {
+    if (a.cat === '卫视') {
       const ra = satvRank(a.name), rb = satvRank(b.name);
       if (ra !== rb) return ra - rb;
     }
@@ -1208,10 +1216,13 @@ function renderGroups() {
   };
 
   if (settings.view === 'channels') {
-    mk('央视频道', '央视频道', state.aggregated.filter((a) => a.cat === '央视频道').length);
-    mk('卫视频道', '卫视频道', state.aggregated.filter((a) => a.cat === '卫视频道').length);
-    mk('港澳台', '港澳台', state.aggregated.filter((a) => a.cat === '港澳台').length);
-    mk('其他', '其他', state.aggregated.filter((a) => a.cat === '其他').length);
+    // 跟随 akira 内部分组：按聚合结果动态生成（已按清单顺序排序）
+    const cats = [];
+    state.aggregated.forEach((a) => { if (!cats.includes(a.cat)) cats.push(a.cat); });
+    cats.forEach((c) => {
+      const n = state.aggregated.filter((a) => a.cat === c).length;
+      if (n > 0) mk(c, c, n);
+    });
     mk('全部频道', '', state.aggregated.length);
     return;
   }

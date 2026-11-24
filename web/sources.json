@@ -3,45 +3,14 @@
   "note": "页面按 type 区分：public=公共源（别人维护），self=自建（服务端已逐条实测的精选清单）。sources 数组顺序就是界面按钮顺序。带 url 的源支持「更新源」一键重新拉取；sync:true 的源还会在 App 启动时静默比对同步；trusted:true 表示服务端已验过，更新时跳过客户端 <video> 实测（避免误杀组播源）。removed:true 的条目只留档不显示。",
   "sources": [
     {
-      "id": "self-iptv-api",
+      "id": "akira",
       "name": "默认",
       "type": "self",
-      "file": "playlists/self-iptv-api.m3u",
-      "url": "https://iptv.wusi321.top/playlists/self-iptv-api.m3u",
+      "file": "playlists/kaitai-0x152k.m3u",
+      "url": "https://iptv.wusi321.top/playlists/kaitai-0x152k.m3u",
       "sync": true,
       "trusted": true,
-      "note": "服务端精选清单（逐条 ffmpeg 抓帧验台标）| 37 条：CCTV-1..17 + CGTN + 卫视 | 含 CCTV-5 / CCTV-5+ / CCTV-6（山东移动组播 223.78.65.165:9901，1080p，key=txiptv）| App 启动自动同步 + 更新源可拉，不再依赖重新打包"
-    },
-    {
-      "id": "public-zbds",
-      "name": "vbskycn/iptv",
-      "type": "public",
-      "file": "playlists/public-zbds-ipv4.m3u",
-      "url": "https://live.zbds.top/tv/iptv4.m3u",
-      "note": "vbskycn/iptv 的镜像域名 zbds，上游每 6 小时扫描 | 原始 339 条 → 实测可播 227 条 | 强项：地方台（市县级广电官方 CDN，实测 89% 可播）"
-    },
-    {
-      "id": "public-suxuang",
-      "name": "suxuang",
-      "type": "public",
-      "file": "playlists/public-suxuang.m3u",
-      "url": "https://raw.githubusercontent.com/suxuang/myIPTV/main/ipv4.m3u",
-      "note": "1273 条 → 实测可播 177 条 | 强项：港澳台（翡翠台 / 明珠台 / TVB Plus / RTHK / HOY TV / TVBS / Astro AOD）+ 国际新闻 + 历年春晚，其中 67 个频道名是其它源完全没有的"
-    },
-    {
-      "id": "public-iptv-org-cn",
-      "name": "iptv-org · CN",
-      "type": "public",
-      "file": "playlists/public-iptv-org-cn.m3u",
-      "url": "https://iptv-org.github.io/iptv/countries/cn.m3u",
-      "note": "156 条 → 实测可播 43 条 | 强项：CCTV 高清与 4K（CCTV-6 HD / CCTV-8K / Anhui TV 1080p）、TV BRICS / VoA；含少量宗教台可忽略"
-    },
-    {
-      "id": "public-imdazui-cctv",
-      "removed": true,
-      "name": "imDazui · CCTV（已撤销）",
-      "type": "public",
-      "note": "2026-11-20 逐站实测 413/413 全部不可达（171 条 502 反代故障 / 102 条 502 / 77 条电信专网超时 / 47 条 cmvideo 令牌过期 404 / 16 条 pptv 接口下线 404），按钮已移除。原始 m3u 转存 02-自建Fork/raw/ 仅供 iptv-api 当原料。"
+      "note": "akiralereal/iptv 自托管聚合源（ECS Docker 1905→10010）| 671 频道，分组跟随 akira 内部分组透传（央视频/央视景观/卫视/体育/少儿/国际/教育/文旅/港澳台/地方台+各省组/景观组）| 清单/台标/EPG 经 nginx /akira/ 元数据代理（https 同源），视频分片直连 CDN | EPG: https://iptv.wusi321.top/akira/playback.xml | 旧聚合源清单备份: kaitai-0x152k.m3u.bak-akira-20261124"
     }
   ]
 }
