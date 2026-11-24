@@ -618,13 +618,6 @@ async function initApp() {
   bindSettingsUI();
   applySettings();
 
-  // 频道健康度：服务端已巡检全量，这里拉一次结果即可立刻点亮所有徽标；
-  // 之后每 5 分钟对齐一次（服务端一轮约 4 分钟），失败静默不影响使用
-  loadHealthFile().then((ok) => { if (ok) refreshHealthBadges(); });
-  setInterval(() => {
-    loadHealthFile(true).then((ok) => { if (ok) refreshHealthBadges(); });
-  }, 5 * 60 * 1000);
-
   if (nativeBridge) {
     $('checkupd').hidden = false;
     if (settings.autoCheck) {
@@ -1368,9 +1361,6 @@ function renderChannelList() {
   const box = $('list');
   const frag = document.createDocumentFragment();
   state.visibleRows = [];
-  const probeTasks = [];
-  const hStat = { ok: 0, bad: 0, unk: 0, na: 0 };
-  let fallbackN = 0;
 
   rows.forEach((a) => {
     const pick = pickDefaultItem(a);
@@ -1407,27 +1397,6 @@ function renderChannelList() {
     meta.textContent = a.cat;   // 一比一聚合后每条线路单独成条，「N 个源」不再有意义
     col.append(nm, meta);
 
-    // 健康度徽标：非央视频走服务端 health.json（一次请求全量点亮）；
-    // 央视频不做探测（见 YSP_URL 注释），显示中性标记
-    const hb = document.createElement('span');
-    hb.className = 'hb wait';
-    hb.dataset.url = pick.ch.url;
-    const ysp = YSP_URL.test(pick.ch.url);
-    const hit = ysp ? null : healthGet(pick.ch.url);
-    if (ysp) {
-      hb.className = 'hb na';
-      hb.textContent = '—';
-      hb.title = '央视频线路由服务端统一取流，不做探测（探测会占满上游配额，影响播放）';
-      hStat.na++;
-    } else {
-      paintBadge(hb, hit);
-      if (hit) hStat[hit.ok ? 'ok' : 'bad']++; else hStat.unk++;
-      if (!hit && fallbackN < HEALTH_PROBE_MAX) {
-        probeTasks.push({ el: hb, url: pick.ch.url });   // 服务端没覆盖到的少量兜底
-        fallbackN++;
-      }
-    }
-
     // 收藏星标
     const fav = isFav(a.cat, a.name);
     const star = document.createElement('span');
@@ -1439,7 +1408,7 @@ function renderChannelList() {
       toggleFav(a.cat, a.name);
     });
 
-    btn.append(img, col, hb, star);
+    btn.append(img, col, star);
     btn.addEventListener('click', () => playChannel(pick.ch, pick.src));
     frag.appendChild(btn);
   });
@@ -1447,18 +1416,11 @@ function renderChannelList() {
   box.innerHTML = '';
   box.appendChild(frag);
 
-  // 标题行：把巡检覆盖情况直接写出来，避免「只测了一部分」的误解
-  let head = '显示 ' + rows.length + ' / ' + state.aggregated.length + ' 个频道';
-  if (hStat.ok || hStat.bad) {
-    head += ' · 巡检 ' + (hStat.ok + hStat.bad) + ' 条：' + hStat.ok + ' 在线';
-    if (hStat.bad) head += ' / ' + hStat.bad + ' 异常';
-  }
-  if (hStat.na) head += ' · 央视频 ' + hStat.na + ' 条不巡检';
-  $('count').textContent = head;
+  $('count').textContent =
+    '显示 ' + rows.length + ' / ' + state.aggregated.length + ' 个频道';
 
   const cur = box.querySelector('.chan.on');
   if (cur) cur.scrollIntoView({ block: 'nearest' });
-  if (probeTasks.length) scheduleHealth(probeTasks);
 }
 
 /* ============================================================
@@ -1682,158 +1644,6 @@ function setupEpgPanel() {
   let open = false;
   try { open = localStorage.getItem(EPG_OPEN_KEY) === '1'; } catch (e) {}
   apply(open);
-}
-
-/* ============================================================
-   频道健康度
-
-   数据来源优先走服务端巡检结果 health.json（ECS 上 kaitai-healthd 常驻，约 4 分钟
-   跑完 625 条全量），前端一次请求即可给**所有**频道打上徽标，客户端零探测。
-
-   为什么不能全在前端探：akira 的央视频提取器限「10 秒内 6 个不同频道」，超限时
-   返回的是 HTTP 200 + 中文错误文本（不是 429），串行探 625 条要 25 分钟以上，
-   还会跟服务端巡检抢额度。所以前端只在 health.json 缺某些频道时做少量补测。
-   ============================================================ */
-const HEALTH_KEY = 'kaitai-health-v1';
-const HEALTH_TTL = 30 * 60 * 1000;   // 服务端每轮约 5 分钟，客户端放宽到 30 分钟
-const HEALTH_FILE = 'health.json';
-// 网页版与服务器同源，直接相对取；Mac/Windows App 页面是 127.0.0.1 本地服务，
-// 没有这份文件，走原生桥 download 或直连服务器绝对地址
-const HEALTH_REMOTE = 'https://iptv.wusi321.top/health.json';
-const HEALTH_PROBE_MAX = 40;         // 仅兜底：health.json 没覆盖到的条数上限
-// 央视频 relay：清单由 akira 在机房向央视频官方取，再做二次分发。
-// 所以无论从服务端还是从用户机器去探，最终都是机房 IP 发请求——
-//   * 机房 IP 探央视频官方 CDN 会 403，探不出真实状态（伪阴性）；
-//   * 反复探会把 akira 的官方请求配额打满，连带让真实播放取流失败。
-// 结论：央视频一律不做健康探测，徽标留空，如实告知。
-const YSP_URL = /\/akira\/relay\/ysp-/i;
-let healthCache = null;
-let healthGen = 0;
-let healthFileLoaded = false;
-const probing = new Map();
-
-function healthStore() {
-  if (!healthCache) {
-    try { healthCache = JSON.parse(localStorage.getItem(HEALTH_KEY) || '{}'); } catch (e) { healthCache = {}; }
-  }
-  return healthCache;
-}
-function healthGet(url) {
-  const h = healthStore()[url];
-  return h && Date.now() - h.at < HEALTH_TTL ? h : null;
-}
-function healthSet(url, ok, ms) {
-  healthStore()[url] = { ok, ms, at: Date.now() };
-  try { localStorage.setItem(HEALTH_KEY, JSON.stringify(healthCache)); } catch (e) {}
-}
-function paintBadge(el, h) {
-  el.className = 'hb ' + (h ? (h.ok ? 'ok' : 'bad') : 'wait');
-  el.textContent = h ? (h.ok ? h.ms + ' ms' : '超时') : '…';
-}
-
-/* 拉取服务端全量巡检结果，合并进本地缓存
-   三个来源依次尝试：
-     1. 同源健康文件（网页版直接命中）
-     2. 原生桥 download（App 页面来自 127.0.0.1，跨源只能走 URLSession）
-     3. 绝对地址直连（服务器若放了 CORS 也能用） */
-async function loadHealthFile(force) {
-  if (healthFileLoaded && !force) return true;
-  let d = null;
-  try {
-    const res = await fetch(HEALTH_FILE, { cache: 'no-store' });
-    if (res.ok) d = await res.json();
-  } catch (e) { /* 继续下一个来源 */ }
-
-  if (!d && nativeBridge && nativeBridge.postMessage) {
-    try {
-      const r = await nativeBridge.postMessage({ action: 'download', urls: [HEALTH_REMOTE] });
-      const raw = (r && r.texts && r.texts[HEALTH_REMOTE]) || '';
-      if (raw) d = JSON.parse(raw);
-    } catch (e) { /* 继续下一个来源 */ }
-  }
-
-  if (!d) {
-    try {
-      const res = await fetch(HEALTH_REMOTE, { cache: 'no-store' });
-      if (res.ok) d = await res.json();
-    } catch (e) { /* 放弃 */ }
-  }
-
-  if (!d) return false;
-  try {
-    const items = (d && d.items) || {};
-    // 服务端文件过期（>30 分钟没更新）时按它自己的时间戳落库，交给 TTL 自然淘汰
-    const ts = Number(d && d.ts) || 0;
-    const fresh = ts && Math.abs(Date.now() / 1000 - ts) < 1800;
-    const at = fresh ? Date.now() : ts * 1000;
-    const store = healthStore();
-    let n = 0;
-    for (const url of Object.keys(items)) {
-      const it = items[url];
-      if (!it || it.unk) continue;      // 本轮没测出来就别覆盖旧结论
-      store[url] = { ok: it.ok ? 1 : 0, ms: it.ms, at };
-      n++;
-    }
-    try { localStorage.setItem(HEALTH_KEY, JSON.stringify(store)); } catch (e) {}
-    healthFileLoaded = true;
-    return n > 0;
-  } catch (e) {
-    return false;
-  }
-}
-
-/* health.json 到达后，把已经渲染出来的徽标重新刷一遍 */
-function refreshHealthBadges() {
-  document.querySelectorAll('#list .hb').forEach((el) => {
-    const u = el.dataset.url;
-    if (u) paintBadge(el, healthGet(u));
-  });
-}
-let lastProbeAt = 0;
-async function probeUrl(url) {
-  // 网络层硬限速：无论上游怎么并发，实际发请求间隔不少于 2 秒
-  const wait = 2000 - (Date.now() - lastProbeAt);
-  if (lastProbeAt && wait > 0) await new Promise((r) => setTimeout(r, wait));
-  lastProbeAt = Date.now();
-  // 同一 URL 复用进行中的请求，避免多次渲染重复探测
-  if (probing.has(url)) return probing.get(url);
-  const run = (async () => {
-    const t0 = performance.now();
-    const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), 6000);
-    try {
-      const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
-      if (!res.ok) return { ok: false, ms: Math.round(performance.now() - t0) };
-      await res.text();
-      return { ok: true, ms: Math.round(performance.now() - t0) };
-    } catch (e) {
-      return { ok: false, ms: -1 };
-    } finally { clearTimeout(to); }
-  })();
-  probing.set(url, run);
-  try { return await run; } finally { probing.delete(url); }
-}
-
-let healthTimer = null;
-function scheduleHealth(tasks) {
-  // 兜底补测链：正常情况 health.json 已覆盖绝大多数频道，tasks 基本为空
-  const gen = ++healthGen;
-  if (healthTimer) { clearTimeout(healthTimer); healthTimer = null; }
-  const queue = tasks.filter((t) => !t.hit);
-  tasks.forEach((t) => paintBadge(t.el, t.hit));
-  let i = 0;
-  const step = async () => {
-    if (gen !== healthGen || i >= queue.length) return;
-    const t = queue[i++];
-    t.el.className = 'hb wait';
-    t.el.textContent = '测…';
-    const r = await probeUrl(t.url);
-    if (gen !== healthGen) return;
-    healthSet(t.url, r.ok, r.ms);
-    paintBadge(t.el, { ok: r.ok, ms: r.ms });
-    healthTimer = setTimeout(step, 2400);   // ≥2.4s：akira 央视频限 10 秒 6 个不同频道
-  };
-  healthTimer = setTimeout(step, 900);
 }
 
 /* ---------- 播放 ---------- */

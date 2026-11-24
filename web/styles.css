@@ -945,21 +945,7 @@ body.ios .volwrap { display: none; }
 .epg-tag.live { background: var(--accent); color: #fff; }
 .epg-tag.re { background: var(--accent-soft); color: var(--accent); }
 
-/* ---------- 频道行：健康度徽标 + 收藏星标 ---------- */
-.hb {
-  flex: 0 0 auto;
-  min-width: 46px;
-  text-align: right;
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-  color: var(--ink-3);
-}
-.hb.ok { color: #2e7d32; }
-.hb.bad { color: #c62828; }
-/* 不巡检：央视频线路由 akira 机房统一取流，探测只会打满上游配额，故意留空 */
-.hb.na { color: var(--ink-3); opacity: .45; }
-html[data-theme='dark'] .hb.ok { color: #81c784; }
-html[data-theme='dark'] .hb.bad { color: #ef9a9a; }
+/* ---------- 频道行：收藏星标 ---------- */
 .fav {
   flex: 0 0 auto;
   width: 18px;
