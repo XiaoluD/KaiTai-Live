@@ -28,8 +28,20 @@ jobs:
           Get-ChildItem -Recurse mpv-dev | Where-Object { $_.Name -eq "libmpv-2.dll" } | Select-Object -First 1 | ForEach-Object { Copy-Item $_.FullName libmpv-2.dll }
           if (-not (Test-Path libmpv-2.dll)) { throw "libmpv-2.dll 未解出" }
 
+      - name: Resolve release tag
+        id: rel
+        shell: pwsh
+        run: |
+          # 触发 tag: windows-1.0.8 / windows-v1.0.8 → 统一并入 v1.0.8 这一个 Release
+          # （macOS 与 Windows 同 Release，App 内「检查更新」的 releases/latest 才不会指向错误资产）
+          $raw = "${{ github.ref_name }}"
+          $v = $raw -replace '^windows-', ''
+          if (-not $v.StartsWith('v')) { $v = "v$v" }
+          "tag=$v" >> $env:GITHUB_OUTPUT
+          "version=$($v.TrimStart('v'))" >> $env:GITHUB_OUTPUT
+
       - name: Build
-        run: dotnet publish windows-app/KaiTai/KaiTai.csproj -c Release -o publish
+        run: dotnet publish windows-app/KaiTai/KaiTai.csproj -c Release -o publish /p:Version=${{ steps.rel.outputs.version }}
 
       - name: Pack
         shell: pwsh
@@ -50,7 +62,7 @@ jobs:
 
             **安装**：解压到任意目录 → 运行 KaiTai.exe（需 Windows 10/11 x64）
             **注意**：解压路径建议避开 C:\Program Files（本地服务需写 playlists）
-          tag_name: windows-1.0.0
+          tag_name: ${{ steps.rel.outputs.tag }}
           overwrite_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
