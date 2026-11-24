@@ -41,6 +41,18 @@ https://iptv.wusi321.top/akira/relay/ysp-cctv17.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-cctv4k.m3u8
 #EXTINF:-1 tvg-id="CCTV8K超高清" tvg-name="CCTV8K超高清" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV8K%E8%B6%85%E9%AB%98%E6%B8%85.png?v=2cc908436c" catchup="none" group-title="央视",CCTV8K超高清
 https://iptv.wusi321.top/akira/relay/ysp-cctv8k.m3u8
+#EXTINF:-1 tvg-id="CGTN" tvg-name="CGTN" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/901e3d6e1207bb50d9f1.png?v=1795504098280&from=source" catchup="none" group-title="央视",CGTN
+https://iptv.wusi321.top/akira/relay/ysp-cgtn.m3u8
+#EXTINF:-1 tvg-id="CGTN法语" tvg-name="CGTN法语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/7f5ee36c2d0bc77bc616.png?v=1795504098280&from=source" catchup="none" group-title="央视",CGTN法语
+https://iptv.wusi321.top/akira/relay/ysp-cgtnfy.m3u8
+#EXTINF:-1 tvg-id="CGTN俄语" tvg-name="CGTN俄语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/d97a004f9753193814ae.png?v=1795504098280&from=source" catchup="none" group-title="央视",CGTN俄语
+https://iptv.wusi321.top/akira/relay/ysp-cgtney.m3u8
+#EXTINF:-1 tvg-id="CGTN阿拉伯语" tvg-name="CGTN阿拉伯语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/87d60d82ddff43c3b57d.png?v=1795504098280&from=source" catchup="none" group-title="央视",CGTN阿拉伯语
+https://iptv.wusi321.top/akira/relay/ysp-cgtnalby.m3u8
+#EXTINF:-1 tvg-id="CGTN西班牙语" tvg-name="CGTN西班牙语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/65af66d2c34421e179f0.png?v=1795504098280&from=source" catchup="none" group-title="央视",CGTN西班牙语
+https://iptv.wusi321.top/akira/relay/ysp-cgtnxby.m3u8
+#EXTINF:-1 tvg-id="CGTN纪录" tvg-name="CGTN纪录" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/6e58a236f5a47e52bb15.png?v=1795504098280&from=source" catchup="none" group-title="央视",CGTN纪录
+https://iptv.wusi321.top/akira/relay/ysp-cgtnwyjl.m3u8
 #EXTINF:-1 tvg-id="CCTV风云剧场" tvg-name="CCTV风云剧场" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E9%A3%8E%E4%BA%91%E5%89%A7%E5%9C%BA.png?v=3ae27e88fa" catchup="none" group-title="央视",CCTV风云剧场
 https://iptv.wusi321.top/akira/relay/ysp-cctvfyjc.m3u8
 #EXTINF:-1 tvg-id="CCTV第一剧场" tvg-name="CCTV第一剧场" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E7%AC%AC%E4%B8%80%E5%89%A7%E5%9C%BA.png?v=4bc0fbd35c" catchup="none" group-title="央视",CCTV第一剧场
@@ -71,6 +83,8 @@ https://iptv.wusi321.top/akira/relay/ysp-vip-cctvtq.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvdszn.m3u8
 #EXTINF:-1 tvg-id="CCTV卫生健康" tvg-name="CCTV卫生健康" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E5%8D%AB%E7%94%9F%E5%81%A5%E5%BA%B7.png?v=c8a7deb013" catchup="none" group-title="央视",CCTV卫生健康
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvwsjk.m3u8
+#EXTINF:-1 tvg-id="CGTN Documentary" tvg-name="CGTN Documentary" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CGTN%20Documentary.png?v=b67dd218f3" group-title="央视",CGTN Documentary
+https://english-livebkali.cgtn.com/live/doccgtn.m3u8
 #EXTINF:-1 tvg-id="北京卫视" tvg-name="北京卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/0aeaf0aae8c670a8629e.png?v=1795504098280&from=source" catchup="none" group-title="卫视",北京卫视
 https://iptv.wusi321.top/akira/relay/ysp-bjws.m3u8
 #EXTINF:-1 tvg-id="江苏卫视" tvg-name="江苏卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/bd212357c7ec7e651875.png?v=1795504098280&from=source" catchup="none" group-title="卫视",江苏卫视
@@ -985,18 +999,6 @@ https://iptv.wusi321.top/akira/relay/xjtv-7.m3u8
 https://iptv.wusi321.top/akira/proxy/kankanews-10.m3u8
 #EXTINF:-1 tvg-id="快乐垂钓" tvg-name="快乐垂钓" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E5%BF%AB%E4%B9%90%E5%9E%82%E9%92%93.png?v=483e238c9d" catchup="none" group-title="体育",快乐垂钓
 https://iptv.wusi321.top/akira/proxy/mgtv-218.m3u8
-#EXTINF:-1 tvg-id="CGTN" tvg-name="CGTN" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/901e3d6e1207bb50d9f1.png?v=1795504098280&from=source" catchup="none" group-title="国际",CGTN
-https://iptv.wusi321.top/akira/relay/ysp-cgtn.m3u8
-#EXTINF:-1 tvg-id="CGTN法语" tvg-name="CGTN法语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/7f5ee36c2d0bc77bc616.png?v=1795504098280&from=source" catchup="none" group-title="国际",CGTN法语
-https://iptv.wusi321.top/akira/relay/ysp-cgtnfy.m3u8
-#EXTINF:-1 tvg-id="CGTN俄语" tvg-name="CGTN俄语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/d97a004f9753193814ae.png?v=1795504098280&from=source" catchup="none" group-title="国际",CGTN俄语
-https://iptv.wusi321.top/akira/relay/ysp-cgtney.m3u8
-#EXTINF:-1 tvg-id="CGTN阿拉伯语" tvg-name="CGTN阿拉伯语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/87d60d82ddff43c3b57d.png?v=1795504098280&from=source" catchup="none" group-title="国际",CGTN阿拉伯语
-https://iptv.wusi321.top/akira/relay/ysp-cgtnalby.m3u8
-#EXTINF:-1 tvg-id="CGTN西班牙语" tvg-name="CGTN西班牙语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/65af66d2c34421e179f0.png?v=1795504098280&from=source" catchup="none" group-title="国际",CGTN西班牙语
-https://iptv.wusi321.top/akira/relay/ysp-cgtnxby.m3u8
-#EXTINF:-1 tvg-id="CGTN纪录" tvg-name="CGTN纪录" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/6e58a236f5a47e52bb15.png?v=1795504098280&from=source" catchup="none" group-title="国际",CGTN纪录
-https://iptv.wusi321.top/akira/relay/ysp-cgtnwyjl.m3u8
 #EXTINF:-1 tvg-id="YTN News" tvg-name="YTN News" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/e0822ac6bd8d8917288e.jpg?v=1795504098280&from=source" catchup="none" group-title="国际",YTN News
 https://iptv.wusi321.top/akira/proxy/asian-live-ytn.m3u8
 #EXTINF:-1 tvg-id="NHK World" tvg-name="NHK World" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/NHK%20World.png?v=fefd297879" catchup="none" group-title="国际",NHK World
@@ -1025,8 +1027,6 @@ https://thefirst-oando.amagi.tv/playlist.m3u8
 https://cdn.qd.je/163189/ch8
 #EXTINF:-1 tvg-id="CHU" tvg-name="CHU" tvg-logo="https://epg.112114.xyz/logo/CHU.png" group-title="国际",CHU
 https://cdn.qd.je/163189/chu
-#EXTINF:-1 tvg-id="CGTN Documentary" tvg-name="CGTN Documentary" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CGTN%20Documentary.png?v=b67dd218f3" group-title="国际",CGTN Documentary
-https://english-livebkali.cgtn.com/live/doccgtn.m3u8
 #EXTINF:-1 tvg-id="西藏｜甲岗拉姆雪山及县城湿地" tvg-name="西藏｜甲岗拉姆雪山及县城湿地" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/eedfd38f5c134942415b.jpg?v=1795504098280&from=source" catchup="none" group-title="央视景观",西藏｜甲岗拉姆雪山及县城湿地
 https://iptv.wusi321.top/akira/proxy/livechina-ahhs01.m3u8
 #EXTINF:-1 tvg-id="甘肃｜漳县贵清山植物园" tvg-name="甘肃｜漳县贵清山植物园" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/f76d98af01424e661cf6.jpg?v=1795504098280&from=source" catchup="none" group-title="央视景观",甘肃｜漳县贵清山植物园
