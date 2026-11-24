@@ -90,6 +90,9 @@
       <div class="src-switch" id="srcSwitch"></div>
 
       <div class="controls">
+        <button id="epgBtn" class="ctl" title="节目单 / 回看（E）">
+          <span class="ctl-ico">☰</span><span class="ctl-label">节目单</span>
+        </button>
         <!-- iOS 外部播放器：VLC/Infuse 内核全格式强容错，网页点频道一键跳转（App Store 免签） -->
         <button id="openVlc" class="ctl" hidden title="用 VLC 播放">
           <span class="ctl-ico">▶</span><span class="ctl-label">VLC</span>
@@ -113,6 +116,9 @@
         <button id="player" class="ctl primary" hidden>用 IINA 打开</button>
       </div>
     </div>
+
+    <!-- 节目单面板：正在播 + 接下来 + 已播可回看（数据来自清单头 x-tvg-url） -->
+    <div class="epg" id="epg" hidden></div>
 
     <div class="tip" id="tip" hidden></div>
   </main>

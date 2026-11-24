@@ -13,7 +13,12 @@ const state = {
   activeCat: '央视频', // 进入程序默认打开央视（akira 内部分组名）
   current: null,
   hls: null,
-  timer: null
+  timer: null,
+  // 清单头元数据（EPG 地址、回看模板）
+  playlistMeta: { tvgUrl: '', catchup: '', catchupSource: '' },
+  epg: null,        // { map: Map<normName, [{start,stop,title}]>, fetchedAt }
+  favs: [],         // ['分组::频道名']
+  history: []       // [{cat,name,url,ts}] 最近观看，最新在前
 };
 
 let aggLoaded = false;
@@ -83,17 +88,24 @@ async function loadAllSources() {
   if (aggLoaded) return;
   $('count').textContent = '聚合所有源…';
   const results = await Promise.all(state.sources.map(async (s) => {
+    const meta = { tvgUrl: '', catchup: '', catchupSource: '' };
     try {
       // 网页/PWA 的「更新源」结果存本地：优先用本机最新实测列表，覆盖服务器文件
       const override = readPlaylistOverrides()[s.id];
-      if (override) return { src: s, channels: parseM3U(override) };
+      if (override) return { src: s, channels: parseM3U(override, meta), meta };
       const res = await fetch('./' + s.file, { cache: 'no-store' });
-      if (!res.ok) return { src: s, channels: [] };
-      return { src: s, channels: parseM3U(await res.text()) };
+      if (!res.ok) return { src: s, channels: [], meta };
+      return { src: s, channels: parseM3U(await res.text(), meta), meta };
     } catch (e) {
-      return { src: s, channels: [] };
+      return { src: s, channels: [], meta };
     }
   }));
+
+  // 清单头元数据（EPG 地址、回看模板）取第一个有内容的源
+  state.playlistMeta = { tvgUrl: '', catchup: '', catchupSource: '' };
+  for (const r of results) {
+    if (r.meta && (r.meta.tvgUrl || r.meta.catchupSource)) { state.playlistMeta = r.meta; break; }
+  }
 
   // 一比一聚合：清单里每条线路独立成条（与源 m3u 逐行对应，不做同名合并）；
   // 同频道的多线路仍可通过播放页的「换线路」找到（按 normName 动态关联）
@@ -593,6 +605,8 @@ async function initApp() {
 
   renderSourceButtons();
   setupMobileUI();
+  loadPrefs();          // 收藏 / 最近观看
+  setupEpgPanel();      // 节目单面板开关（默认收合，状态记忆）
   // 先探一次原生能力，后面的播放分支要靠 hasEmbeddedPlayer
   await setupExternalButton();
   setupUpdateButton();
@@ -1203,6 +1217,9 @@ function renderGroups() {
   };
 
   if (settings.view === 'channels') {
+    // 收藏与最近观看置顶（虚拟分组，数据来自 localStorage）
+    mk(FAV_CAT, FAV_CAT, state.favs.length);
+    mk(HIS_CAT, HIS_CAT, state.history.length);
     // 跟随 akira 内部分组：按聚合结果动态生成（已按清单顺序排序）
     const cats = [];
     state.aggregated.forEach((a) => { if (!cats.includes(a.cat)) cats.push(a.cat); });
@@ -1269,7 +1286,17 @@ function renderList() {
     gp.className = 'gp';
     gp.textContent = c.group;
 
-    el.append(img, nm, gp);
+    const fav = isFav(c.group || '', c.name);
+    const star = document.createElement('span');
+    star.className = 'fav' + (fav ? ' on' : '');
+    star.textContent = fav ? '★' : '☆';
+    star.title = fav ? '取消收藏' : '收藏';
+    star.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleFav(c.group || '', c.name);
+    });
+
+    el.append(img, nm, gp, star);
     el.addEventListener('click', () => playChannel(c));
     frag.appendChild(el);
   });
@@ -1286,11 +1313,20 @@ function renderList() {
 function renderChannelList() {
   const q = $('q').value.trim().toLowerCase();
   const cat = state.activeCat;
-  const rows = state.aggregated.filter((a) => {
-    if (cat && a.cat !== cat) return false;
-    if (q && !a.name.toLowerCase().includes(q)) return false;
-    return true;
-  });
+  let rows;
+  if (cat === HIS_CAT) {
+    // 最近观看：按观看时间倒序，映射回聚合条目（键为 分组+频道名）
+    rows = state.history
+      .map((h) => state.aggregated.find((a) => a.cat === h.cat && a.name === h.name))
+      .filter(Boolean);
+    if (q) rows = rows.filter((a) => a.name.toLowerCase().includes(q));
+  } else {
+    rows = state.aggregated.filter((a) => {
+      if (cat === FAV_CAT ? !isFav(a.cat, a.name) : (cat && a.cat !== cat)) return false;
+      if (q && !a.name.toLowerCase().includes(q)) return false;
+      return true;
+    });
+  }
 
   $('count').textContent =
     '显示 ' + rows.length + ' / ' + state.aggregated.length + ' 个频道';
@@ -1298,6 +1334,7 @@ function renderChannelList() {
   const box = $('list');
   const frag = document.createDocumentFragment();
   state.visibleRows = [];
+  const healthTasks = [];
 
   rows.forEach((a) => {
     const pick = pickDefaultItem(a);
@@ -1334,7 +1371,23 @@ function renderChannelList() {
     meta.textContent = a.cat;   // 一比一聚合后每条线路单独成条，「N 个源」不再有意义
     col.append(nm, meta);
 
-    btn.append(img, col);
+    // 健康度徽标（仅前 8 行抽样，避免触发 akira 防探测）
+    const hb = document.createElement('span');
+    hb.className = 'hb wait';
+    if (healthTasks.length < 8) healthTasks.push({ el: hb, url: pick.ch.url, hit: healthGet(pick.ch.url) });
+
+    // 收藏星标
+    const fav = isFav(a.cat, a.name);
+    const star = document.createElement('span');
+    star.className = 'fav' + (fav ? ' on' : '');
+    star.textContent = fav ? '★' : '☆';
+    star.title = fav ? '取消收藏' : '收藏';
+    star.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      toggleFav(a.cat, a.name);
+    });
+
+    btn.append(img, col, hb, star);
     btn.addEventListener('click', () => playChannel(pick.ch, pick.src));
     frag.appendChild(btn);
   });
@@ -1344,6 +1397,305 @@ function renderChannelList() {
 
   const cur = box.querySelector('.chan.on');
   if (cur) cur.scrollIntoView({ block: 'nearest' });
+  if (healthTasks.length) scheduleHealth(healthTasks);
+}
+
+/* ============================================================
+   收藏 / 最近观看
+   键用「分组+频道名」而不是 tvg-id —— 订阅刷新后 tvg-id 可能变，名称稳定得多
+   ============================================================ */
+const FAV_KEY = 'kaitai-favs-v1';
+const HIS_KEY = 'kaitai-history-v1';
+const FAV_CAT = '★ 收藏';
+const HIS_CAT = '↺ 最近观看';
+
+function loadPrefs() {
+  try { state.favs = JSON.parse(localStorage.getItem(FAV_KEY) || '[]') || []; } catch (e) { state.favs = []; }
+  try { state.history = JSON.parse(localStorage.getItem(HIS_KEY) || '[]') || []; } catch (e) { state.history = []; }
+}
+function savePrefs() {
+  try {
+    localStorage.setItem(FAV_KEY, JSON.stringify(state.favs));
+    localStorage.setItem(HIS_KEY, JSON.stringify(state.history));
+  } catch (e) { /* 隐私模式下忽略 */ }
+}
+const favKeyOf = (cat, name) => cat + '::' + name;
+const isFav = (cat, name) => state.favs.includes(favKeyOf(cat, name));
+
+function toggleFav(cat, name) {
+  const k = favKeyOf(cat, name);
+  const i = state.favs.indexOf(k);
+  if (i >= 0) state.favs.splice(i, 1); else state.favs.push(k);
+  savePrefs();
+  renderGroups();
+  renderList();
+}
+
+function recordHistory(cat, name, url) {
+  state.history = state.history.filter((h) => !(h.cat === cat && h.name === name));
+  state.history.unshift({ cat, name, url, ts: Date.now() });
+  if (state.history.length > 30) state.history.length = 30;
+  savePrefs();
+}
+
+/* ============================================================
+   节目单（EPG）：清单头 x-tvg-url 指向的 XMLTV，30 分钟内存缓存
+   ============================================================ */
+const EPG_TTL = 30 * 60 * 1000;
+
+function epgAddress() {
+  return (state.playlistMeta && state.playlistMeta.tvgUrl) ||
+    'https://iptv.wusi321.top/akira/playback.xml';
+}
+
+/* XMLTV 时间：20261124001500 +0800 → 本地时间戳 */
+function epgTime(s) {
+  const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/.exec(String(s || ''));
+  if (!m) return 0;
+  return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+}
+
+async function loadEpg(force) {
+  if (!force && state.epg && Date.now() - state.epg.fetchedAt < EPG_TTL) return state.epg;
+  const res = await fetch(epgAddress(), { cache: 'no-store' });
+  if (!res.ok) throw new Error('EPG HTTP ' + res.status);
+  const doc = new DOMParser().parseFromString(await res.text(), 'text/xml');
+  const map = new Map();
+  doc.querySelectorAll('programme').forEach((node) => {
+    const ch = node.getAttribute('channel');
+    const start = epgTime(node.getAttribute('start'));
+    const stop = epgTime(node.getAttribute('stop'));
+    if (!ch || !start || !stop) return;
+    const tn = node.querySelector('title');
+    const k = normName(ch);
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push({ start, stop, title: tn ? tn.textContent.trim() : '' });
+  });
+  map.forEach((list) => list.sort((a, b) => a.start - b.start));
+  state.epg = { map, fetchedAt: Date.now() };
+  return state.epg;
+}
+
+const pad2 = (n) => (n < 10 ? '0' + n : '' + n);
+const hm = (ts) => { const d = new Date(ts); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); };
+
+function catchupTemplate() {
+  const t = state.playlistMeta && state.playlistMeta.catchupSource;
+  return t || '?playbackbegin=${(b)yyyyMMddHHmmss}&playbackend=${(e)yyyyMMddHHmmss}';
+}
+function stamp(ts) {
+  const d = new Date(ts);
+  return '' + d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate()) +
+    pad2(d.getHours()) + pad2(d.getMinutes()) + pad2(d.getSeconds());
+}
+function catchupUrl(ch, start, stop) {
+  return ch.url + catchupTemplate()
+    .replace(/\$\{\(b\)[^}]*\}/g, stamp(start))
+    .replace(/\$\{\(e\)[^}]*\}/g, stamp(stop));
+}
+/* 频道级 catchup="none" 优先；否则看清单头是否声明了 append 回看 */
+function channelSupportsCatchup(ch) {
+  if (ch && ch.catchup) return ch.catchup !== 'none';
+  return (state.playlistMeta && state.playlistMeta.catchup) === 'append';
+}
+
+/* 回看能力探测：清单头声明 append 不代表回放端真支持。
+ * 实测 akira relay 会忽略 playbackbegin/playseek，直接回直播清单 —— 用一次请求验证：
+ * 返回清单首片时间贴近请求起点（±3 分钟）才算真回看，结果缓存 24 小时 */
+const CATCHUP_PROBE_KEY = 'kaitai-catchup-probe-v1';
+let catchupProbe = null;
+
+async function probeCatchup(ch) {
+  try {
+    const c = JSON.parse(localStorage.getItem(CATCHUP_PROBE_KEY) || 'null');
+    if (c && typeof c.ok === 'boolean' && Date.now() - c.at < 24 * 3600 * 1000) return c.ok;
+  } catch (e) { /* 忽略 */ }
+  const start = Date.now() - 10 * 60 * 1000;
+  const stop = start + 5 * 60 * 1000;
+  let ok = false;
+  try {
+    const res = await fetch(catchupUrl(ch, start, stop), { cache: 'no-store' });
+    if (res.ok) {
+      const txt = await res.text();
+      const m = /#EXT-X-PROGRAM-DATE-TIME:(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/.exec(txt);
+      if (m) {
+        const t = new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime();
+        ok = Math.abs(t - start) < 3 * 60 * 1000;
+      }
+    }
+  } catch (e) { ok = false; }
+  try { localStorage.setItem(CATCHUP_PROBE_KEY, JSON.stringify({ ok, at: Date.now() })); } catch (e) {}
+  return ok;
+}
+
+async function catchupSupported(ch) {
+  if (!channelSupportsCatchup(ch)) return false;
+  if (catchupProbe !== null) return catchupProbe;
+  catchupProbe = await probeCatchup(ch);
+  return catchupProbe;
+}
+
+function epgRowHtml(p, cls, canReplay, now) {
+  let bar = '';
+  if (cls === 'now') {
+    const pct = Math.max(0, Math.min(100, ((now - p.start) / (p.stop - p.start)) * 100));
+    bar = '<span class="epg-bar"><i style="width:' + pct.toFixed(1) + '%"></i></span>';
+  }
+  const clickable = cls === 'past' && canReplay;
+  const attr = clickable ? ' data-start="' + p.start + '" data-stop="' + p.stop + '"' : '';
+  const tag = cls === 'now' ? '<span class="epg-tag live">直播中</span>'
+    : (clickable ? '<span class="epg-tag re">回看</span>' : '');
+  return '<div class="epg-row ' + cls + '"' + attr + '>' +
+    '<time>' + hm(p.start) + '</time>' +
+    '<span class="epg-t">' + escapeHtml(p.title || '—') + '</span>' + bar + tag + '</div>';
+}
+
+let epgSeq = 0;
+async function renderEpg() {
+  const box = $('epg');
+  if (!box || box.hidden) return;
+  const cur = state.current;
+  if (!cur) { box.innerHTML = '<div class="epg-empty">选择频道后显示节目单</div>'; return; }
+  const seq = ++epgSeq;
+  box.innerHTML = '<div class="epg-head"><span>节目单 · ' + escapeHtml(cur.name) +
+    '</span><span class="epg-sub">加载中…</span></div>';
+  let epg;
+  try {
+    epg = await loadEpg();
+  } catch (e) {
+    if (seq === epgSeq) {
+      box.innerHTML = '<div class="epg-head"><span>节目单</span><span class="epg-sub">加载失败 ' +
+        escapeHtml(String(e.message || e)) + '</span></div>';
+    }
+    return;
+  }
+  if (seq !== epgSeq) return;
+  const list = epg.map.get(normName(cur.name)) || [];
+  if (!list.length) {
+    box.innerHTML = '<div class="epg-head"><span>节目单 · ' + escapeHtml(cur.name) +
+      '</span><span class="epg-sub">暂无数据</span></div>';
+    return;
+  }
+  const now = Date.now();
+  const curIdx = list.findIndex((p) => p.start <= now && p.stop > now);
+  const past = list.filter((p) => p.stop <= now).slice(-4);
+  const next = curIdx >= 0 ? list.slice(curIdx + 1, curIdx + 5)
+    : list.filter((p) => p.start > now).slice(0, 4);
+  const canReplay = await catchupSupported(cur);
+  const declared = channelSupportsCatchup(cur);
+  const rows = [];
+  past.forEach((p) => rows.push(epgRowHtml(p, 'past', canReplay, now)));
+  if (curIdx >= 0) rows.push(epgRowHtml(list[curIdx], 'now', false, now));
+  next.forEach((p) => rows.push(epgRowHtml(p, 'next', false, now)));
+
+  const hint = canReplay ? '· 点历史节目回看'
+    : (declared ? '· 该源未实现回看' : '· 该频道不支持回看');
+  box.innerHTML = '<div class="epg-head"><span>节目单 · ' + escapeHtml(cur.name) + '</span>' +
+    '<span class="epg-sub">' + new Date().toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) +
+    ' ' + hint + '</span></div>' +
+    '<div class="epg-list">' + rows.join('') + '</div>';
+
+  const ch = cur;
+  box.querySelectorAll('.epg-row[data-start]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const start = +el.dataset.start, stop = +el.dataset.stop;
+      const u = catchupUrl(ch, start, stop);
+      playChannel(Object.assign({}, ch, { url: u }), state.activeSource, true);
+      setOverlay('回看中', hm(start) + '–' + hm(stop) + ' · ' + ch.name, false);
+    });
+  });
+}
+
+/* 节目单面板开关：默认收合，展开状态记在本机 */
+const EPG_OPEN_KEY = 'kaitai-epg-open';
+function setupEpgPanel() {
+  const box = $('epg'), btn = $('epgBtn');
+  if (!box || !btn) return;
+  const apply = (open) => {
+    box.hidden = !open;
+    btn.classList.toggle('on', open);
+    try { localStorage.setItem(EPG_OPEN_KEY, open ? '1' : '0'); } catch (e) {}
+    if (open) renderEpg();
+  };
+  btn.addEventListener('click', () => apply(box.hidden));
+  let open = false;
+  try { open = localStorage.getItem(EPG_OPEN_KEY) === '1'; } catch (e) {}
+  apply(open);
+}
+
+/* ============================================================
+   频道健康度：可见行抽样探测（间隔 2 秒、单屏最多 8 条、缓存 10 分钟）
+   akira 有防探测（10 秒 6 个不同频道即拒），速率刻意压低，别改成并发
+   ============================================================ */
+const HEALTH_KEY = 'kaitai-health-v1';
+const HEALTH_TTL = 10 * 60 * 1000;
+let healthCache = null;
+let healthGen = 0;
+const probing = new Map();
+
+function healthStore() {
+  if (!healthCache) {
+    try { healthCache = JSON.parse(localStorage.getItem(HEALTH_KEY) || '{}'); } catch (e) { healthCache = {}; }
+  }
+  return healthCache;
+}
+function healthGet(url) {
+  const h = healthStore()[url];
+  return h && Date.now() - h.at < HEALTH_TTL ? h : null;
+}
+function healthSet(url, ok, ms) {
+  healthStore()[url] = { ok, ms, at: Date.now() };
+  try { localStorage.setItem(HEALTH_KEY, JSON.stringify(healthCache)); } catch (e) {}
+}
+function paintBadge(el, h) {
+  el.className = 'hb ' + (h ? (h.ok ? 'ok' : 'bad') : 'wait');
+  el.textContent = h ? (h.ok ? h.ms + ' ms' : '超时') : '…';
+}
+let lastProbeAt = 0;
+async function probeUrl(url) {
+  // 网络层硬限速：无论上游怎么并发，实际发请求间隔不少于 2 秒
+  const wait = 2000 - (Date.now() - lastProbeAt);
+  if (lastProbeAt && wait > 0) await new Promise((r) => setTimeout(r, wait));
+  lastProbeAt = Date.now();
+  // 同一 URL 复用进行中的请求，避免多次渲染重复探测
+  if (probing.has(url)) return probing.get(url);
+  const run = (async () => {
+    const t0 = performance.now();
+    const ctrl = new AbortController();
+    const to = setTimeout(() => ctrl.abort(), 6000);
+    try {
+      const res = await fetch(url, { cache: 'no-store', signal: ctrl.signal });
+      if (!res.ok) return { ok: false, ms: Math.round(performance.now() - t0) };
+      await res.text();
+      return { ok: true, ms: Math.round(performance.now() - t0) };
+    } catch (e) {
+      return { ok: false, ms: -1 };
+    } finally { clearTimeout(to); }
+  })();
+  probing.set(url, run);
+  try { return await run; } finally { probing.delete(url); }
+}
+
+let healthTimer = null;
+function scheduleHealth(tasks) {
+  // 单条探测链：新渲染打断旧链（清掉待触发的定时器，不能并存）
+  const gen = ++healthGen;
+  if (healthTimer) { clearTimeout(healthTimer); healthTimer = null; }
+  const queue = tasks.filter((t) => !t.hit);
+  tasks.forEach((t) => paintBadge(t.el, t.hit));
+  let i = 0;
+  const step = async () => {
+    if (gen !== healthGen || i >= queue.length) return;
+    const t = queue[i++];
+    t.el.className = 'hb wait';
+    t.el.textContent = '测…';
+    const r = await probeUrl(t.url);
+    if (gen !== healthGen) return;
+    healthSet(t.url, r.ok, r.ms);
+    paintBadge(t.el, { ok: r.ok, ms: r.ms });
+    healthTimer = setTimeout(step, 2400);   // ≥2.4s：低于 akira 6 个/10 秒的防探测阈值
+  };
+  healthTimer = setTimeout(step, 900);
 }
 
 /* ---------- 播放 ---------- */
@@ -1391,12 +1743,17 @@ function playChannel(ch, src, auto) {
   }
   state.current = ch;
   rememberChannel();
+  // 记录观看历史（分组取聚合条目的 cat，保证与收藏/列表的键一致）
+  const aggEntry = state.aggregated.find((a) => a.items.some((it) => it.ch.url === ch.url));
+  recordHistory(aggEntry ? aggEntry.cat : (ch.group || ''), ch.name, ch.url);
+  if (settings.view === 'channels' && state.activeCat === HIS_CAT) { renderGroups(); renderList(); }
   document.querySelectorAll('.chan').forEach((el) => {
     el.classList.toggle('on', el.dataset.url === ch.url);
   });
 
   $('now').textContent = ch.name + (ch.group ? ' · ' + ch.group : '');
   renderSrcSwitch();
+  renderEpg();                // 节目单跟随当前频道刷新（面板关闭时内部直接 return）
   updateNowPlaying(ch);       // iPhone/iPad 锁屏与灵动岛显示正在播的频道
   closeRailOnNarrow();        // 手机窄屏：选完频道自动收起抽屉
   // iOS 外部播放器按钮：选了频道才出现
@@ -1660,10 +2017,23 @@ function setOverlay(title, sub, bad, link) {
 
 /* ---------- m3u 解析 ---------- */
 
-function parseM3U(text) {
+function parseM3U(text, meta) {
   const out = [];
   const lines = text.split(/\r?\n/);
   let pending = null;
+
+  // 清单头元数据：#EXTM3U x-tvg-url="…" catchup="append" catchup-source="…"
+  if (meta) {
+    const head = lines.find((l) => l.trim().startsWith('#EXTM3U'));
+    if (head) {
+      const tv = /x-tvg-url="([^"]*)"/i.exec(head);
+      if (tv) meta.tvgUrl = tv[1];
+      const cs = /catchup-source="([^"]*)"/i.exec(head);
+      if (cs) meta.catchupSource = cs[1];
+      const cu = /catchup="([^"]*)"/i.exec(head);
+      if (cu) meta.catchup = cu[1];
+    }
+  }
 
   for (const raw of lines) {
     const line = raw.trim();
@@ -1692,7 +2062,7 @@ function parseM3U(text) {
 }
 
 function parseInfo(line) {
-  const info = { name: '', logo: '', group: '', url: '' };
+  const info = { name: '', logo: '', group: '', url: '', tvgId: '', catchup: '' };
 
   const logo = /tvg-logo="([^"]*)"/i.exec(line);
   if (logo) info.logo = logo[1];
@@ -1702,6 +2072,12 @@ function parseInfo(line) {
 
   const nm = /tvg-name="([^"]*)"/i.exec(line);
   if (nm) info.name = nm[1];
+
+  // 节目单匹配键（akira 的 tvg-id 就是频道名）与频道级回看开关（"none" 表示不回看）
+  const id = /tvg-id="([^"]*)"/i.exec(line);
+  if (id) info.tvgId = id[1];
+  const cu = /catchup="([^"]*)"/i.exec(line);
+  if (cu) info.catchup = cu[1];
 
   const comma = line.lastIndexOf(',');
   if (comma > -1) {
@@ -1820,6 +2196,7 @@ document.addEventListener('keydown', (e) => {
     case 'm': case 'M': toggleMute(); break;
     case 'f': case 'F': toggleFullscreen(); break;
     case 'r': case 'R': $('retry').click(); break;
+    case 'e': case 'E': $('epgBtn').click(); break;
   }
 });
 
