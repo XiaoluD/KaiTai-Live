@@ -103,9 +103,9 @@
         <button id="pause" class="ctl" disabled>
           <span class="ctl-ico">⏸</span><span class="ctl-label">暂停</span>
         </button>
-        <div class="volwrap" id="volwrap" title="音量">
-          <span id="volico"></span>
-          <input id="vol" type="range" min="0" max="100" value="100">
+        <div class="volwrap" id="volwrap">
+          <span id="volico" role="button" tabindex="0" title="静音（M）" aria-label="静音"></span>
+          <input id="vol" type="range" min="0" max="100" value="100" aria-label="音量">
         </div>
         <button id="retry" class="ctl" title="重试当前频道">
           <span class="ctl-ico">↻</span><span class="ctl-label">重试</span>

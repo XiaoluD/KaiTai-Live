@@ -14,6 +14,7 @@ const state = {
   current: null,
   hls: null,
   timer: null,
+  prevVol: 100, // 静音前的音量，供音量图标点击后恢复
   // 清单头元数据（EPG 地址、回看模板）
   playlistMeta: { tvgUrl: '', catchup: '', catchupSource: '' },
   epg: null,        // { map: Map<normName, [{start,stop,title}]>, fetchedAt }
@@ -402,11 +403,17 @@ function applyVolume(v, persist) {
   if (persist) {
     try { localStorage.setItem(VOL_KEY, String(v)); } catch (e) {}
   }
+  const muted = v === 0;
+  // 记住最后一次非零音量：无论是图标静音还是拖到 0，点图标都能回到原来的音量
+  if (!muted) state.prevVol = v;
   $('vol').value = v;
-  $('volico').innerHTML = v > 0 ? VOL_ON : VOL_OFF;
+  $('volico').innerHTML = muted ? VOL_OFF : VOL_ON;
+  $('volico').title = muted ? '取消静音（M）' : '静音（M）';
+  $('volico').setAttribute('aria-label', muted ? '取消静音' : '静音');
+  $('volwrap').classList.toggle('muted', muted);
   if (mpvOn) mpvCall('volume', { value: v });
   const video = $('video');
-  video.muted = v === 0;
+  video.muted = muted;
   video.volume = v / 100;
 }
 
@@ -1601,15 +1608,13 @@ async function renderEpg() {
   }
   const now = Date.now();
   const curIdx = list.findIndex((p) => p.start <= now && p.stop > now);
-  const past = list.filter((p) => p.stop <= now).slice(-4);
-  const next = curIdx >= 0 ? list.slice(curIdx + 1, curIdx + 5)
-    : list.filter((p) => p.start > now).slice(0, 4);
   const canReplay = await catchupSupported(cur);
   const declared = channelSupportsCatchup(cur);
-  const rows = [];
-  past.forEach((p) => rows.push(epgRowHtml(p, 'past', canReplay, now)));
-  if (curIdx >= 0) rows.push(epgRowHtml(list[curIdx], 'now', false, now));
-  next.forEach((p) => rows.push(epgRowHtml(p, 'next', false, now)));
+  // 整档节目全部渲染（通常一整天），面板自身滚动；绝对时间轴上的空档照实呈现
+  const rows = list.map((p) => {
+    const cls = p.stop <= now ? 'past' : (p.start <= now ? 'now' : 'next');
+    return epgRowHtml(p, cls, cls === 'past' ? canReplay : false, now);
+  });
 
   const hint = canReplay ? '· 点历史节目回看'
     : (declared ? '· 该源未实现回看' : '· 该频道不支持回看');
@@ -1627,6 +1632,11 @@ async function renderEpg() {
       setOverlay('回看中', hm(start) + '–' + hm(stop) + ' · ' + ch.name, false);
     });
   });
+
+  // 整档节目一次铺开，打开时把「正在播」滚到面板上部 1/4 处（既不遮住当前，
+  // 又留出后面几小时可翻）；没有当前节目就停在第一条
+  const nowRow = box.querySelector('.epg-row.now');
+  box.scrollTop = Math.max(0, (nowRow ? nowRow.offsetTop : 0) - box.clientHeight / 4);
 }
 
 /* 节目单面板开关：默认收合，展开状态记在本机 */
@@ -2184,6 +2194,15 @@ $('video').addEventListener('play', () => setPauseUI(false));
 
 /* 音量：内嵌走 mpv，网页版走 <video>；设置持久化 */
 $('vol').addEventListener('input', (e) => applyVolume(+e.target.value || 0, true));
+/* 点音量图标 = 静音开关，再点恢复；键盘 Enter/Space 同效。
+   必须 stopPropagation：全局 keydown 把空格绑成了暂停，不拦会误触 */
+$('volico').addEventListener('click', (e) => { e.stopPropagation(); toggleMute(); });
+$('volico').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  e.preventDefault();
+  e.stopPropagation();
+  toggleMute();
+});
 $('vol').value = curVol();
 applyVolume(curVol(), false); // 启动即渲染音量图标与初始状态
 

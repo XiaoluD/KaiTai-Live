@@ -71,8 +71,18 @@ body {
 }
 
 .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
-#volico { display: inline-flex; align-items: center; }
+#volico {
+  display: inline-flex; align-items: center;
+  padding: 4px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .15s, color .15s, transform .1s;
+}
 #volico svg { display: block; }
+#volico:hover { background: rgba(127,127,127,.16); }
+#volico:active { transform: scale(.9); }
+#volico:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.volwrap.muted #volico { color: var(--accent); }
 .upd-status { font-size: 11px; color: var(--ink-2); max-width: 200px; }
 
 .iconbtn {
@@ -896,8 +906,11 @@ body.ios .volwrap { display: none; }
 /* ---------- 节目单面板（EPG） ---------- */
 .epg {
   flex: 0 0 auto;
-  max-height: 38vh;
+  position: relative;              /* 让 .epg-row 的 offsetTop 相对面板，滚动定位才准 */
+  max-height: min(46vh, 440px);
   overflow-y: auto;
+  overscroll-behavior: contain;    /* 滚到底不带着整页一起滚 */
+  -webkit-overflow-scrolling: touch;
   margin-top: 10px;
   padding: 10px 12px 12px;
   border: 1px solid var(--line);
