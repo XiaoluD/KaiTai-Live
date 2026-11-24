@@ -33,14 +33,10 @@ https://iptv.wusi321.top/akira/relay/ysp-cctv14.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-cctv15.m3u8
 #EXTINF:-1 tvg-id="CCTV16奥林匹克" tvg-name="CCTV16奥林匹克" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV16%E5%A5%A5%E6%9E%97%E5%8C%B9%E5%85%8B.png?v=506e6e8ae8" catchup="none" group-title="央视频",CCTV16奥林匹克
 https://iptv.wusi321.top/akira/relay/ysp-cctv16.m3u8
-#EXTINF:-1 tvg-id="CCTV16奥林匹克" tvg-name="CCTV16奥林匹克" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV16%204K.png?v=506e6e8ae8" catchup="none" group-title="央视频",CCTV16 4K
-https://iptv.wusi321.top/akira/relay/ysp-cctv164k.m3u8
 #EXTINF:-1 tvg-id="CCTV17农业农村" tvg-name="CCTV17农业农村" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV17%E5%86%9C%E4%B8%9A%E5%86%9C%E6%9D%91.png?v=a4d373a06b" catchup="none" group-title="央视频",CCTV17农业农村
 https://iptv.wusi321.top/akira/relay/ysp-cctv17.m3u8
 #EXTINF:-1 tvg-id="CCTV4K超高清" tvg-name="CCTV4K超高清" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV4K%E8%B6%85%E9%AB%98%E6%B8%85.png?v=92cd6d9e73" catchup="none" group-title="央视频",CCTV4K超高清
 https://iptv.wusi321.top/akira/relay/ysp-cctv4k.m3u8
-#EXTINF:-1 tvg-id="CCTV8K超高清" tvg-name="CCTV8K超高清" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV8K%E8%B6%85%E9%AB%98%E6%B8%85.png?v=2cc908436c" catchup="none" group-title="央视频",CCTV8K超高清
-https://iptv.wusi321.top/akira/relay/ysp-cctv8k.m3u8
 #EXTINF:-1 tvg-id="CGTN" tvg-name="CGTN" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/901e3d6e1207bb50d9f1.png?v=1795504098280&from=source" catchup="none" group-title="央视频",CGTN
 https://iptv.wusi321.top/akira/relay/ysp-cgtn.m3u8
 #EXTINF:-1 tvg-id="CGTN法语" tvg-name="CGTN法语" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/7f5ee36c2d0bc77bc616.png?v=1795504098280&from=source" catchup="none" group-title="央视频",CGTN法语
@@ -83,16 +79,20 @@ https://iptv.wusi321.top/akira/relay/ysp-vip-cctvtq.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvdszn.m3u8
 #EXTINF:-1 tvg-id="CCTV卫生健康" tvg-name="CCTV卫生健康" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/CCTV%E5%8D%AB%E7%94%9F%E5%81%A5%E5%BA%B7.png?v=c8a7deb013" catchup="none" group-title="央视频",CCTV卫生健康
 https://iptv.wusi321.top/akira/relay/ysp-vip-cctvwsjk.m3u8
+#EXTINF:-1 tvg-id="湖南卫视" tvg-name="湖南卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E6%B9%96%E5%8D%97%E5%8D%AB%E8%A7%86.png?v=4ef167dc0d" group-title="卫视",湖南卫视4K
+http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
+#EXTINF:-1 tvg-id="浙江卫视" tvg-name="浙江卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E6%B5%99%E6%B1%9F%E5%8D%AB%E8%A7%86.png?v=0aaa78a90a" group-title="卫视",浙江卫视4K
+http://ali-xwl.cztv.com/live/channel4k2160p.m3u8
+#EXTINF:-1 tvg-id="东方卫视" tvg-name="东方卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/6fc630f60798249ef3c4.png?v=1795504098280&from=source" catchup="none" group-title="卫视",东方卫视
+https://iptv.wusi321.top/akira/relay/ysp-dfws.m3u8
 #EXTINF:-1 tvg-id="北京卫视" tvg-name="北京卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/0aeaf0aae8c670a8629e.png?v=1795504098280&from=source" catchup="none" group-title="卫视",北京卫视
 https://iptv.wusi321.top/akira/relay/ysp-bjws.m3u8
 #EXTINF:-1 tvg-id="江苏卫视" tvg-name="江苏卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/bd212357c7ec7e651875.png?v=1795504098280&from=source" catchup="none" group-title="卫视",江苏卫视
 https://iptv.wusi321.top/akira/relay/ysp-jsws.m3u8
-#EXTINF:-1 tvg-id="东方卫视" tvg-name="东方卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/6fc630f60798249ef3c4.png?v=1795504098280&from=source" catchup="none" group-title="卫视",东方卫视
-https://iptv.wusi321.top/akira/relay/ysp-dfws.m3u8
-#EXTINF:-1 tvg-id="浙江卫视" tvg-name="浙江卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/6b4097b43495e6611e67.png?v=1795504098280&from=source" catchup="none" group-title="卫视",浙江卫视
-https://iptv.wusi321.top/akira/relay/ysp-zjws.m3u8
 #EXTINF:-1 tvg-id="湖南卫视" tvg-name="湖南卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/60c1c4eb0e589d2970f0.png?v=1795504098280&from=source" catchup="none" group-title="卫视",湖南卫视
 https://iptv.wusi321.top/akira/relay/ysp-hnws.m3u8
+#EXTINF:-1 tvg-id="浙江卫视" tvg-name="浙江卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/6b4097b43495e6611e67.png?v=1795504098280&from=source" catchup="none" group-title="卫视",浙江卫视
+https://iptv.wusi321.top/akira/relay/ysp-zjws.m3u8
 #EXTINF:-1 tvg-id="湖北卫视" tvg-name="湖北卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/464d6ae0e03b0f806628.png?v=1795504098280&from=source" catchup="none" group-title="卫视",湖北卫视
 https://iptv.wusi321.top/akira/relay/ysp-hbws.m3u8
 #EXTINF:-1 tvg-id="广东卫视" tvg-name="广东卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/3b749da8f48801b9f0c8.png?v=1795504098280&from=source" catchup="none" group-title="卫视",广东卫视
@@ -145,10 +145,6 @@ https://iptv.wusi321.top/akira/relay/ysp-qhws.m3u8
 https://iptv.wusi321.top/akira/relay/ysp-xzws.m3u8
 #EXTINF:-1 tvg-id="新疆卫视" tvg-name="新疆卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/68a4c218cc6482b4b676.png?v=1795504098280&from=source" catchup="none" group-title="卫视",新疆卫视
 https://iptv.wusi321.top/akira/relay/ysp-xjws.m3u8
-#EXTINF:-1 tvg-id="湖南卫视" tvg-name="湖南卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E6%B9%96%E5%8D%97%E5%8D%AB%E8%A7%86.png?v=4ef167dc0d" group-title="卫视",湖南卫视4K
-http://hlsal-ldvt.qing.mgtv.com/nn_live/nn_x64/Y2RuZXhfaWQ9YWxfaGxzX2xkdnQmZT02OTE0NjA0JnY9MSZpZD1ITldTWkdTVCZzPTcwN2RiYTc2YzJjNmJmMTQ4MmUyZGYzOWU2NWM3YWFi/HNWSZGST.m3u8
-#EXTINF:-1 tvg-id="浙江卫视" tvg-name="浙江卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E6%B5%99%E6%B1%9F%E5%8D%AB%E8%A7%86.png?v=0aaa78a90a" group-title="卫视",浙江卫视4K
-http://ali-xwl.cztv.com/live/channel4k2160p.m3u8
 #EXTINF:-1 tvg-id="湖北卫视" tvg-name="湖北卫视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/54bf2202ad445fee63aa.png?v=1795504098280&from=source" catchup="none" group-title="地方台",湖北卫视
 https://iptv.wusi321.top/akira/proxy/hbtv-431.m3u8
 #EXTINF:-1 tvg-id="湖北经视" tvg-name="湖北经视" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/2c99054702b0f5971506.png?v=1795504098280&from=source" catchup="none" group-title="地方台",湖北经视
@@ -463,20 +459,20 @@ https://pb-ehs1glsha1juy.akamaized.net/v1/manifest/3722c60a815c199d9c0ef36c5b73d
 https://rt-rtd.rttv.com/live/rtdoc/playlist_4500Kb.m3u8
 #EXTINF:-1 tvg-id="Inside Outside" tvg-name="Inside Outside" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/41a050eee9fbcf377744.png?v=1795504098280&from=source" group-title="文旅",Inside Outside
 https://52405cd167dc41c68edcaa842b916ccd.mediatailor.us-east-1.amazonaws.com/v1/master/44f73ba4d03e9607dcd9bebdcb8494d86964f1d8/LG-au_InsideOutside/playlist.m3u8
+#EXTINF:-1 tvg-id="海外科技回暖 反弹能否变反转" tvg-name="海外科技回暖 反弹能否变反转" tvg-logo="" catchup="none" group-title="北京景观",海外科技回暖 反弹能否变反转
+https://iptv.wusi321.top/akira/proxy/beijing-live-6-57v1kshq7pb95jqn93829593n9l.m3u8
+#EXTINF:-1 tvg-id="“平安的温度”主题公益直播" tvg-name="“平安的温度”主题公益直播" tvg-logo="" catchup="none" group-title="北京景观",“平安的温度”主题公益直播
+https://iptv.wusi321.top/akira/proxy/beijing-live-6-52mqf8p94hi9mma99q3uj5hrck7.m3u8
+#EXTINF:-1 tvg-id="平安的温度 主题公益直播" tvg-name="平安的温度 主题公益直播" tvg-logo="" catchup="none" group-title="北京景观",平安的温度 主题公益直播
+https://iptv.wusi321.top/akira/proxy/beijing-live-6-5358ub0kuj29llpch0armsh5039.m3u8
 #EXTINF:-1 tvg-id="谁不说咱家乡美·冬游季" tvg-name="谁不说咱家乡美·冬游季" tvg-logo="" catchup="none" group-title="北京景观",谁不说咱家乡美·冬游季
 https://iptv.wusi321.top/akira/proxy/beijing-live-6-57pn30j99c69ela1h9kbaskmgla.m3u8
 #EXTINF:-1 tvg-id="慢直播｜跟着课本去旅行《迷人的张家界》" tvg-name="慢直播｜跟着课本去旅行《迷人的张家界》" tvg-logo="" catchup="none" group-title="北京景观",慢直播｜跟着课本去旅行《迷人的张家界》
 https://iptv.wusi321.top/akira/proxy/beijing-live-6-53brd67p39p85fp3marineh4ugr.m3u8
-#EXTINF:-1 tvg-id="寻礼北京城｜「北京范儿」好物直播间上新啦" tvg-name="寻礼北京城｜「北京范儿」好物直播间上新啦" tvg-logo="" catchup="none" group-title="北京景观",寻礼北京城｜「北京范儿」好物直播间上新啦
-https://iptv.wusi321.top/akira/proxy/beijing-live-6-51skvlakmer8ha91nc1tgjoaqd9.m3u8
+#EXTINF:-1 tvg-id="为了睡个好觉，你试过哪些办法？" tvg-name="为了睡个好觉，你试过哪些办法？" tvg-logo="" catchup="none" group-title="北京景观",为了睡个好觉，你试过哪些办法？
+https://iptv.wusi321.top/akira/proxy/beijing-live-6-53qfvb08gr28jr8updd69ffeg25.m3u8
 #EXTINF:-1 tvg-id="《耳朵嗡嗡响，是累了还是病了?》" tvg-name="《耳朵嗡嗡响，是累了还是病了?》" tvg-logo="" catchup="none" group-title="北京景观",《耳朵嗡嗡响，是累了还是病了?》
 https://iptv.wusi321.top/akira/proxy/beijing-live-6-544ud80oge58v2al5gfgmvgmoeh.m3u8
-#EXTINF:-1 tvg-id="民间借贷，最容易被“做”掉的环节" tvg-name="民间借贷，最容易被“做”掉的环节" tvg-logo="" catchup="none" group-title="北京景观",民间借贷，最容易被“做”掉的环节
-https://iptv.wusi321.top/akira/proxy/beijing-live-6-53ufa7vr42989na85olrup8a90s.m3u8
-#EXTINF:-1 tvg-id="【读书俱乐部】国际肺癌关注月：聊聊体检遇上肺结节" tvg-name="【读书俱乐部】国际肺癌关注月：聊聊体检遇上肺结节" tvg-logo="" catchup="none" group-title="北京景观",【读书俱乐部】国际肺癌关注月：聊聊体检遇上肺结节
-https://iptv.wusi321.top/akira/proxy/beijing-live-6-54b1s86prqp8r3bnn6g8co7u6o1.m3u8
-#EXTINF:-1 tvg-id="佳士得香港 瑰丽珠宝及翡翠首饰" tvg-name="佳士得香港 瑰丽珠宝及翡翠首饰" tvg-logo="" catchup="none" group-title="北京景观",佳士得香港 瑰丽珠宝及翡翠首饰
-https://iptv.wusi321.top/akira/proxy/beijing-live-6-577fp2immta9b0qckuveu3ks1jg.m3u8
 #EXTINF:-1 tvg-id="长春市·双阳区" tvg-name="长春市·双阳区" tvg-logo="" catchup="none" group-title="吉林风景",长春市·双阳区
 https://iptv.wusi321.top/akira/proxy/jlntv-slow-shuangyang.m3u8
 #EXTINF:-1 tvg-id="吉林市·松花江江湾" tvg-name="吉林市·松花江江湾" tvg-logo="" catchup="none" group-title="吉林风景",吉林市·松花江江湾
@@ -713,8 +709,12 @@ https://iptv.wusi321.top/akira/proxy/dalian-7.m3u8
 https://iptv.wusi321.top/akira/proxy/dalian-8.m3u8
 #EXTINF:-1 tvg-id="大连文体" tvg-name="大连文体" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/cd8f3b2927a73b809b8d.jpg?v=1795504098280&from=source" catchup="none" group-title="辽宁",大连文体
 https://iptv.wusi321.top/akira/proxy/dalian-9.m3u8
+#EXTINF:-1 tvg-id="辽宁都市" tvg-name="辽宁都市" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/3e9f8210a1ab404b8e28.jpg?v=1795505490918&from=source" catchup="none" group-title="辽宁",辽宁都市
+https://iptv.wusi321.top/akira/proxy/liaoning-10d3de0d03c62e85a1a281bbde8b6952.m3u8
 #EXTINF:-1 tvg-id="辽宁影视剧" tvg-name="辽宁影视剧" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/a0e4c07403eccc043c01.jpg?v=1795504098280&from=source" catchup="none" group-title="辽宁",辽宁影视剧
 https://iptv.wusi321.top/akira/proxy/liaoning-918510749a0f319ec12ff695b1c95230.m3u8
+#EXTINF:-1 tvg-id="辽宁生活" tvg-name="辽宁生活" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E8%BE%BD%E5%AE%81%E7%94%9F%E6%B4%BB.png?v=5fc205efdc" catchup="none" group-title="辽宁",辽宁生活
+https://iptv.wusi321.top/akira/proxy/liaoning-078ce87dcf5384d51e4655cb962fda18.m3u8
 #EXTINF:-1 tvg-id="辽宁体育休闲" tvg-name="辽宁体育休闲" tvg-logo="https://iptv.wusi321.top/akira/logo-pack/%E8%BE%BD%E5%AE%81%E4%BD%93%E8%82%B2%E4%BC%91%E9%97%B2.png?v=31dd4915dd" catchup="none" group-title="辽宁",辽宁体育休闲
 https://iptv.wusi321.top/akira/proxy/liaoning-e0bb9a7fd9afa954658bc50d0681cd49.m3u8
 #EXTINF:-1 tvg-id="家庭理财" tvg-name="家庭理财" tvg-logo="https://iptv.wusi321.top/akira/logo-cache/d20982fa32498971bf7f.jpg?v=1795504098280&from=source" catchup="none" group-title="辽宁",家庭理财
