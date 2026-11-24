@@ -676,7 +676,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let appItem = NSMenuItem()
         let appMenu = NSMenu()
-        appMenu.addItem(withTitle: "关于开台直播", action: nil, keyEquivalent: "")
+        let aboutItem = NSMenuItem(
+            title: "关于开台直播",
+            action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)),
+            keyEquivalent: "")
+        aboutItem.target = NSApp   // action 为 nil 时该项是灰的（点不动）
+        appMenu.addItem(aboutItem)
         appMenu.addItem(.separator())
         appMenu.addItem(menuItem("检查更新", action: "checkupd", key: "u"))
         appMenu.addItem(menuItem("设置…", action: "settings", key: ","))

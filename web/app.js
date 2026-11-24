@@ -740,12 +740,23 @@ function applySettings() {
 }
 sysDark.addEventListener('change', () => { if (settings.theme === 'system') applySettings(); });
 
+/* 设置面板开关的唯一入口。
+ * macOS App 里播放画面是原生 libmpv 图层，盖在 WKWebView 之上 —— 弹窗打开时
+ * 必须让原生层暂时隐藏，否则面板被视频压住，表现为「设置弹不出来」。 */
+function setSettingsOpen(open) {
+  const sc = $('settingsScrim');
+  if (!sc) return;
+  if (sc.hidden === !open) return;   // 状态没变就不重复发指令（多监听器会重复触发）
+  sc.hidden = !open;
+  try { mpvCall('overlay', { hidden: open ? true : mpvPaused }); } catch (e) { /* 网页版无 mpv */ }
+}
+
 function bindSettingsUI() {
   window.__bindDone = true; // 自检标记：绑定流程是否跑过
-  $('settingsBtn').addEventListener('click', () => { $('settingsScrim').hidden = false; });
-  $('settingsClose').addEventListener('click', () => { $('settingsScrim').hidden = true; });
+  $('settingsBtn').addEventListener('click', () => setSettingsOpen(true));
+  $('settingsClose').addEventListener('click', () => setSettingsOpen(false));
   $('settingsScrim').addEventListener('click', (e) => {
-    if (e.target === $('settingsScrim')) $('settingsScrim').hidden = true;
+    if (e.target === $('settingsScrim')) setSettingsOpen(false);
   });
 
   // 兜底：捕获阶段再挂一次——即使上面某个处理器抛错或别处 stopPropagation，
@@ -756,8 +767,8 @@ function bindSettingsUI() {
       const t = e.target && e.target.closest ? e.target.closest('#settingsBtn, #settingsClose') : null;
       const sc = $('settingsScrim');
       if (!sc) return;
-      if (t) { sc.hidden = t.id === 'settingsClose'; return; }
-      if (e.target === sc) sc.hidden = true;
+      if (t) { setSettingsOpen(t.id === 'settingsBtn'); return; }
+      if (e.target === sc) setSettingsOpen(false);
     }, true);
   }
 
@@ -797,7 +808,7 @@ function bindSettingsUI() {
   // 设置面板里的「更新播放源」：关面板后在侧边栏底部状态区看进度
   $('setUpdateSources').addEventListener('click', () => {
     const b = $('update');
-    $('settingsScrim').hidden = true;
+    setSettingsOpen(false);
     if (!b.hidden) b.click();
   });
 
