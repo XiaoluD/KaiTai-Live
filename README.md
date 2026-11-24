@@ -78,7 +78,7 @@ iptv-web/
 ├── mac-app/            ← macOS 原生壳：main.swift（窗口/菜单/mpv 桥）、Updater.swift（自动更新）、MpvPlayer.swift、build.sh、icon/
 ├── windows-app/KaiTai/ ← Windows 原生壳：.NET 8 WinForms + WebView2 + libmpv(P/Invoke)
 ├── scripts/            ← update-sources.sh（拉取公共源）、release.sh（本地出包）
-├── deploy/             ← ECS 部署：sync.sh（rsync + 远端 chmod）、nginx.conf、crontab.txt
+├── deploy/             ← ECS 部署：sync.sh（rsync + 远端 chmod）、nginx.conf、crontab.txt、healthd.py（频道巡检守护）
 ├── 01-公共源/          ← 公共源同步与校验（sync-public.sh / verify.py / deep-verify.sh）
 ├── 02-自建Fork/        ← 自建 iptv-api 源同步
 └── .github/workflows/  ← release.yml（macOS）、windows-build.yml、update-sources.yml（每日更新公共源）
@@ -92,6 +92,19 @@ iptv-web/
 |---|---|---|
 | 应用本体 | 设置 → 关于 → 检查更新，或启动静默检查 | 比对 `releases/latest` 的 tag 与 `CFBundleShortVersionString`，命中则下载 zip、换包、重启 |
 | 频道源 | App 启动 / 菜单「更新播放源」 | 静默比对服务端 `playlists/self-iptv-api.m3u`（按频道集合 diff，仅注释差异不写盘），有变化落盘并提示；手动更新则会重新实测公共源 |
+
+## 频道健康度巡检（服务端）
+
+前端不给每条频道单独发探测请求（625 条串行要 20 分钟以上，还会和播放抢源站配额）。
+改由 ECS 上常驻的 `deploy/healthd.py` 巡检，产出静态文件 `/var/www/iptv/health.json`，
+前端一次请求（App 走原生桥 download）即可点亮全部徽标。
+
+- 服务：`kaitai-healthd.service`（systemd，`systemctl status kaitai-healthd`）
+- 强度：并发 3、一轮约 6 分钟、歇 3 分钟，失败项串行重测一次（滤掉并发误判）
+- **央视频（`/akira/relay/ysp-*`）刻意不巡检**：清单由 akira 在机房向央视频官方取，
+  机房 IP 会被官方 CDN 回 403；探测既探不出真实状态，又会占满 akira 的官方配额
+  导致真实播放取流失败。这类频道徽标显示为「—」。
+- 回退：`systemctl disable --now kaitai-healthd && rm -f /var/www/iptv/health.json`
 
 ## 已知限制
 

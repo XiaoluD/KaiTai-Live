@@ -956,6 +956,8 @@ body.ios .volwrap { display: none; }
 }
 .hb.ok { color: #2e7d32; }
 .hb.bad { color: #c62828; }
+/* 不巡检：央视频线路由 akira 机房统一取流，探测只会打满上游配额，故意留空 */
+.hb.na { color: var(--ink-3); opacity: .45; }
 html[data-theme='dark'] .hb.ok { color: #81c784; }
 html[data-theme='dark'] .hb.bad { color: #ef9a9a; }
 .fav {
